@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: Install frontend deps (placeholder)
+        run: |
+          echo "Install frontend deps here"
+      - name: Install backend deps (placeholder)
+        run: |
+          echo "Install backend deps here"
+      - name: Run tests (placeholder)
+        run: |
+          echo "Run tests here"
