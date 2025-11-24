@@ -1,22 +1,22 @@
-## Summary
+## Zusammenfassung
 
-Describe the changes in this PR and why they are needed.
+Beschreibe kurz die Änderungen in diesem PR und warum sie notwendig sind.
 
-## Type of change
+## Änderungstyp
 - [ ] Feature
 - [ ] Bugfix
 - [ ] Chore
 - [ ] Docs
 
-## Related issue
-Link to the issue number or ticket (if any).
+## Zugehöriges Issue
+Link zum Issue oder Ticket (falls vorhanden).
 
-## How to test
-1. Steps to run locally
-2. Commands to run tests
+## Wie testen
+1. Schritte, um lokal zu testen
+2. Befehle, um Tests auszuführen
 
-## Checklist
-- [ ] My code follows the project's style guidelines
-- [ ] I updated relevant documentation
-- [ ] I added tests for my changes (if applicable)
-- [ ] All checks passed
+## Checkliste
+- [ ] Der Code folgt den Projekt‑Styleguides
+- [ ] Dokumentation wurde aktualisiert (falls nötig)
+- [ ] Tests für Änderungen wurden hinzugefügt (falls relevant)
+- [ ] Alle Checks sind erfolgreich

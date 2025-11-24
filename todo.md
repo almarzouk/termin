@@ -1,28 +1,26 @@
-# Todo List
+# Aufgabenliste (Deutsch)
 
-This file is generated/maintained as the canonical checklist for the project.
+Diese Datei ist die kanonische Aufgabenliste für das Projekt und wird automatisch/handisch gepflegt.
 
 ## Backlog
 
-- [ ] Add `CONTRIBUTING.md` and PR template
-- [ ] Define branch strategy & protections
-- [ ] Setup GitHub Actions CI skeleton
-- [ ] Implement `sync-todo` GH Action
-- [ ] Add Docker dev environment skeleton
-- [ ] Scaffold Next.js + Laravel skeletons
-- [ ] Install frontend deps (TS, Tailwind)
-- [ ] Install backend deps (Sanctum, Spatie)
-- [ ] Create initial DB migrations & seeders
-- [ ] Add unit & E2E test setup
-- [ ] Document developer workflow & commands
+- [ ] Branch‑Strategie & Schutzregeln definieren
+- [ ] GitHub Actions CI Grundgerüst erstellen
+- [ ] `sync-todo` GH Action implementieren (Issues → `todo.md`)
+- [ ] Next.js + Laravel Grundgerüst (Scaffold)
+- [ ] Frontend‑Abhängigkeiten installieren (TypeScript, Tailwind)
+- [ ] Backend‑Abhängigkeiten installieren (Sanctum, Spatie)
+- [ ] Datenbank‑Migrationen & Seeder erstellen
+- [ ] Unit‑ und E2E‑Tests einrichten
+- [ ] Entwickler‑Workflow & Befehle dokumentieren
 
-## Sprint / Immediate
+## Sprint / Aktuell
 
-- [x] Initialize GitHub repository (local skeleton + initial commit)
-- [ ] Add `README.md` with stack summary
-- [ ] Create `todo.md` (canonical tasks)
-- [ ] Add `.gitignore` and `.env.example`
+- [x] Initiales Repo / Skelett erstellt und gepusht
+- [ ] `README.md` (Deutsch) finalisieren
+- [x] `todo.md` (kanonisch) erstellt
+- [x] `.gitignore` und `.env.example` hinzugefügt
 
-## Done
+## Erledigt
 
-- (initial project skeleton created)
+- Initiales Projekt‑Skelett erstellt
