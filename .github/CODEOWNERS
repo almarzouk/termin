@@ -1,7 +1,0 @@
-# Default code owners
-# Use usernames or teams. Example:
-# /frontend/ @your-org/frontend-team
-# /backend/ @your-org/backend-team
-
-# Assign the whole repo to you by default
-* @almarzouk
