@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Clear Storage</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 0;
+      }
+      .container {
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        max-width: 400px;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px;
+        transition: all 0.3s;
+      }
+      .btn:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+      .status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: bold;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🗑️ LocalStorage Manager</h1>
+      <p>تنظيف البيانات المحفوظة</p>
+
+      <button class="btn" onclick="clearStorage()">مسح كل البيانات</button>
+      <button class="btn" onclick="showStorage()">عرض البيانات</button>
+      <button class="btn" onclick="goToLogin()">الذهاب للتسجيل</button>
+
+      <div id="status"></div>
+    </div>
+
+    <script>
+      function clearStorage() {
+        const before = {
+          token: localStorage.getItem("token"),
+          user: localStorage.getItem("user"),
+        };
+
+        localStorage.clear();
+
+        const statusDiv = document.getElementById("status");
+        statusDiv.className = "status success";
+        statusDiv.innerHTML = `
+                ✅ تم مسح جميع البيانات!<br><br>
+                <small>
+                    Token المحذوف: ${
+                      before.token
+                        ? before.token.substring(0, 30) + "..."
+                        : "لا يوجد"
+                    }<br>
+                    User: ${before.user ? "موجود" : "لا يوجد"}
+                </small>
+            `;
+      }
+
+      function showStorage() {
+        const token = localStorage.getItem("token");
+        const user = localStorage.getItem("user");
+
+        const statusDiv = document.getElementById("status");
+        statusDiv.className = "status info";
+
+        if (!token && !user) {
+          statusDiv.innerHTML = "⚠️ LocalStorage فارغ";
+        } else {
+          statusDiv.innerHTML = `
+                    📦 البيانات المحفوظة:<br><br>
+                    <small style="text-align: left; display: block; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                        <strong>Token:</strong><br>
+                        ${
+                          token ? token.substring(0, 50) + "..." : "لا يوجد"
+                        }<br><br>
+                        <strong>User:</strong><br>
+                        ${user || "لا يوجد"}
+                    </small>
+                `;
+        }
+      }
+
+      function goToLogin() {
+        window.location.href = "/login";
+      }
+
+      // Auto-show storage on load
+      window.onload = showStorage;
+    </script>
+  </body>
+</html>

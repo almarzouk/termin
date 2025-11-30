@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Test - Token Checker</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+      }
+      .btn {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      .btn:hover {
+        background: #2563eb;
+      }
+      .output {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 20px;
+        border-radius: 5px;
+        margin-top: 20px;
+        font-family: "Courier New", monospace;
+        white-space: pre-wrap;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .success {
+        color: #00ff00;
+      }
+      .error {
+        color: #ff4444;
+      }
+      .warning {
+        color: #ffaa00;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔐 API Token Tester</h1>
+
+      <h3>1. Login</h3>
+      <input
+        type="email"
+        id="email"
+        placeholder="Email"
+        value="admin@system.de"
+      />
+      <input
+        type="password"
+        id="password"
+        placeholder="Password"
+        value="Admin@123"
+      />
+      <button class="btn" onclick="testLogin()">Login</button>
+
+      <h3>2. Test Protected Routes</h3>
+      <button class="btn" onclick="testGetUser()">Get User Info</button>
+      <button class="btn" onclick="testGetDoctors()">Get Doctors</button>
+      <button class="btn" onclick="testGetPatients()">Get Patients</button>
+
+      <h3>3. Token Info</h3>
+      <button class="btn" onclick="showToken()">Show Current Token</button>
+      <button class="btn" onclick="clearToken()">Clear Token</button>
+
+      <div class="output" id="output">Ready...</div>
+    </div>
+
+    <script>
+      const API_URL = "http://localhost:8000/api";
+
+      function log(message, type = "info") {
+        const output = document.getElementById("output");
+        const time = new Date().toLocaleTimeString();
+        const className =
+          type === "error"
+            ? "error"
+            : type === "success"
+            ? "success"
+            : type === "warning"
+            ? "warning"
+            : "";
+        output.innerHTML += `<span class="${className}">[${time}] ${message}</span>\n`;
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      async function testLogin() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        log(`🔄 Attempting login: ${email}`, "info");
+
+        try {
+          const response = await fetch(`${API_URL}/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
+            log(`✅ Login successful!`, "success");
+            log(`Token: ${data.token.substring(0, 30)}...`, "success");
+            log(`User: ${data.user.name} (${data.user.email})`, "success");
+            log(`Roles: ${data.user.roles.join(", ")}`, "success");
+          } else {
+            log(`❌ Login failed: ${JSON.stringify(data)}`, "error");
+          }
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, "error");
+        }
+      }
+
+      async function testGetUser() {
+        const token = getToken();
+        if (!token) {
+          log("❌ No token found. Please login first.", "error");
+          return;
+        }
+
+        log("🔄 Fetching user info...", "info");
+
+        try {
+          const response = await fetch(`${API_URL}/auth/user`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            log(`✅ User info retrieved`, "success");
+            log(JSON.stringify(data, null, 2), "success");
+          } else {
+            log(`❌ Failed: ${JSON.stringify(data)}`, "error");
+          }
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, "error");
+        }
+      }
+
+      async function testGetDoctors() {
+        const token = getToken();
+        if (!token) {
+          log("❌ No token found. Please login first.", "error");
+          return;
+        }
+
+        log("🔄 Fetching doctors...", "info");
+        log(`🔑 Using token: ${token.substring(0, 30)}...`, "info");
+
+        try {
+          const response = await fetch(`${API_URL}/doctors`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            log(`✅ Doctors retrieved: ${data.data.length} doctors`, "success");
+            log(JSON.stringify(data, null, 2), "success");
+          } else {
+            log(
+              `❌ Failed (${response.status}): ${JSON.stringify(data)}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, "error");
+        }
+      }
+
+      async function testGetPatients() {
+        const token = getToken();
+        if (!token) {
+          log("❌ No token found. Please login first.", "error");
+          return;
+        }
+
+        log("🔄 Fetching patients...", "info");
+
+        try {
+          const response = await fetch(`${API_URL}/patients`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            log(`✅ Patients retrieved`, "success");
+            log(JSON.stringify(data, null, 2), "success");
+          } else {
+            log(`❌ Failed: ${JSON.stringify(data)}`, "error");
+          }
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, "error");
+        }
+      }
+
+      function showToken() {
+        const token = getToken();
+        const user = localStorage.getItem("user");
+
+        if (token) {
+          log(`🔑 Current Token:`, "success");
+          log(token, "success");
+          if (user) {
+            log(`👤 Current User:`, "success");
+            log(user, "success");
+          }
+        } else {
+          log("⚠️ No token found in localStorage", "warning");
+        }
+      }
+
+      function clearToken() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        log("🗑️ Token and user cleared", "warning");
+      }
+
+      // Auto-show token on load
+      window.onload = function () {
+        showToken();
+      };
+    </script>
+  </body>
+</html>

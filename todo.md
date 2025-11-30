@@ -1,17 +1,78 @@
-# 📋 Mein-Termin Booking System - Development Plan
+# 📋 Mein-Termin Booking System - Master Plan
 
-**Project Type:** SaaS Booking Platform  
+**Project Type:** SaaS Medical Booking Platform  
 **Methodology:** Agile/Scrum  
 **Sprint Duration:** 2 weeks  
 **Total Timeline:** 14 weeks (7 Sprints)  
-**Last Updated:** 24 November 2025
+**Last Updated:** 25 November 2025
 
 ---
 
 ## 🎯 Project Vision
 
 منصة SaaS متخصصة لإدارة وحجز المواعيد للعيادات الطبية (عيادات بشرية وعيادات بيطرية).
-النظام مصمم بطريقة قابلة للتوسع (Scalable) لإضافة أنواع أخرى من الأعمال في المستقبل (صالونات، مراكز رياضية، إلخ).
+
+**Key Features:**
+
+- Multi-tenant clinic management
+- Real-time appointment booking
+- 7-role permission system
+- Medical records management
+- Subscription-based (Stripe)
+- Multi-language support (DE/AR/EN)
+
+**Scalability:** النظام مصمم بطريقة قابلة للتوسع لإضافة أنواع أخرى من الأعمال في المستقبل.
+
+**Primary Language:** 🇩🇪 Deutsch (German) - All UI text in German
+
+---
+
+## 📚 Project Documentation
+
+### 📁 **Backend Documentation**
+
+- 📄 **[BACKEND_TODO.md](./backend/BACKEND_TODO.md)** - Backend development plan & tasks
+- 📄 **[BACKEND_ARCHITECTURE.md](./backend/BACKEND_ARCHITECTURE.md)** - Database schema, roles, permissions
+- 📄 **[DEVELOPMENT_ROADMAP.md](./backend/DEVELOPMENT_ROADMAP.md)** - Phase-by-phase roadmap
+
+### 📁 **Frontend Documentation**
+
+- 📄 **[FRONTEND_TODO.md](./frontend/FRONTEND_TODO.md)** - Frontend development plan & tasks
+
+### 📁 **Additional Documentation**
+
+- 📄 **[USER_SCENARIOS.md](./backend/USER_SCENARIOS.md)** - User journeys & workflows
+- 📄 **API Documentation** - Generated via Scribe (after Backend Phase 1)
+
+---
+
+## 🏗️ Development Approach
+
+### ✅ **Strategy: Backend-First**
+
+**Phase 1-6: Backend Development (12 weeks)**
+
+1. Setup & Database (Week 1-2)
+2. Authentication & Authorization (Week 3-4)
+3. Clinic Management (Week 5-6)
+4. Booking System (Week 7-8)
+5. Patients & Medical Records (Week 9-10)
+6. Subscriptions & Analytics (Week 11-12)
+
+**Phase 7-9: Frontend Development (6 weeks)** 7. Authentication Pages (Week 13-14) 8. Dashboard & Management (Week 15-16) 9. Booking Flow & Analytics (Week 17-18)
+
+**Phase 10: Testing & Deployment (2 weeks)** 10. Comprehensive Testing & Production Launch (Week 19-20)
+
+**Benefits:**
+
+- ✅ APIs tested before Frontend development
+- ✅ Clear contracts between Frontend/Backend
+- ✅ Mobile app possible later (same APIs)
+- ✅ Parallel Frontend development possible
+
+---
+
+## 🏗️ Tech Stack Overview
 
 ---
 
@@ -44,7 +105,7 @@
 
 ### Backend
 
-- [x] Laravel 11
+- [x] Laravel 12
 - [x] MySQL 8
 - [x] Redis
 - [x] Laravel Sanctum (Auth)
@@ -54,12 +115,12 @@
 
 ### Infrastructure
 
-- [ ] Docker (Development)
-- [ ] AWS/DigitalOcean (Production)
+- [ ] Local Development (MySQL + Redis)
+- [ ] VPS Server (Production)
 - [ ] Vercel (Frontend)
 - [ ] Stripe (Payments)
 - [ ] Postmark (Email)
-- [ ] Twilio (SMS)
+- [ ] Twilio (SMS - Optional)
 
 ---
 
@@ -77,7 +138,7 @@
 
 **Tasks:**
 
-- [ ] تثبيت Laravel 11
+- [ ] تثبيت Laravel 12
 - [ ] إعداد MySQL database
 - [ ] إعداد Redis
 - [ ] تكوين environment variables
@@ -176,24 +237,12 @@
 
 #### US-004: إعداد Docker Environment (Optional) ⏳
 
-**Priority:** Should Have  
-**Story Points:** 3  
-**Status:** ⏳ Not Started
+**Priority:** Won't Have  
+**Story Points:** 0  
+**Status:** ❌ Cancelled
 
-**Tasks:**
-
-- [ ] إنشاء Dockerfile للـ Laravel
-- [ ] إنشاء docker-compose.yml
-- [ ] إعداد MySQL container
-- [ ] إعداد Redis container
-- [ ] إعداد volumes للـ persistence
-- [ ] اختبار البيئة كاملة
-
-**Acceptance Criteria:**
-
-- `docker-compose up` يشغل كل شيء
-- Laravel يتصل بـ MySQL و Redis
-- البيانات محفوظة بعد restart
+**Reason:** Development will be done locally without Docker  
+**Alternative:** Using local MySQL + Redis + Laravel Valet/Herd
 
 ---
 
@@ -221,9 +270,9 @@
 
 ### Sprint 0 Summary
 
-**Total Story Points:** 23  
+**Total Story Points:** 20  
 **Must Have:** 20 points  
-**Should Have:** 3 points
+**Won't Have:** 0 points (Docker cancelled)
 
 ---
 
@@ -1419,10 +1468,10 @@
 
 | Category    | Total Story Points |
 | ----------- | ------------------ |
-| Must Have   | 292                |
+| Must Have   | 289                |
 | Should Have | 26                 |
 | Could Have  | 5                  |
-| **Total**   | **323**            |
+| **Total**   | **320**            |
 
 ---
 

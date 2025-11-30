@@ -4,6 +4,7 @@
 **Focus:** Medical Clinics & Veterinary Clinics  
 **Framework:** Laravel 11  
 **Last Updated:** 25 November 2025
+**Primary Language:** 🇩🇪 Deutsch (German) - All UI text in German
 
 ---
 
