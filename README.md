@@ -21,6 +21,7 @@
 ## ✨ Features
 
 ### For Patients
+
 - 🔍 **Clinic Discovery**: Browse and search for clinics by city, specialty, or services
 - 📅 **Easy Booking**: Book appointments with or without registration
 - ⭐ **Reviews & Ratings**: Read reviews and ratings from other patients
@@ -29,6 +30,7 @@
 - 📊 **Patient Dashboard**: Manage appointments, medical records, and prescriptions
 
 ### For Clinic Owners
+
 - 🏢 **Clinic Management**: Manage multiple clinic branches and locations
 - 👨‍⚕️ **Staff Management**: Add doctors, nurses, and administrative staff
 - 🛠️ **Service Catalog**: Define and price medical services
@@ -37,6 +39,7 @@
 - 💳 **Subscription Management**: Handle clinic subscription plans
 
 ### For Super Admin
+
 - 🎛️ **System Control**: Full control over all clinics and users
 - 📊 **Advanced Analytics**: System-wide statistics and reports
 - 👥 **User Management**: Manage all system users and roles
@@ -45,6 +48,7 @@
 - 🔐 **Role & Permission Management**: Configure access control
 
 ### Additional Features
+
 - 🌍 **Multilingual**: Currently supports German (de-DE)
 - 🎨 **Modern UI**: Built with shadcn/ui and Tailwind CSS
 - 🔒 **Secure Authentication**: Laravel Sanctum for API security
@@ -57,6 +61,7 @@
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 16.0.4 (App Router with Turbopack)
 - **Language**: TypeScript
 - **UI Library**: React 19
@@ -67,6 +72,7 @@
 - **HTTP Client**: Fetch API
 
 ### Backend
+
 - **Framework**: Laravel 11.x
 - **Language**: PHP 8.4+
 - **Authentication**: Laravel Sanctum
@@ -74,6 +80,7 @@
 - **Architecture**: Modular structure with Controllers, Models, and Services
 
 ### Development Tools
+
 - **Package Manager**: npm (Frontend), Composer (Backend)
 - **Code Quality**: ESLint, Prettier
 - **Version Control**: Git
@@ -81,12 +88,14 @@
 ## 💻 System Requirements
 
 ### Backend Requirements
+
 - PHP >= 8.4
 - Composer
 - SQLite3 (or MySQL/PostgreSQL for production)
 - Apache/Nginx web server
 
 ### Frontend Requirements
+
 - Node.js >= 18.x
 - npm >= 9.x
 
@@ -170,6 +179,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ### Initial Seeding
 
 The database seeder creates:
+
 - **1 Super Admin** (admin@system.de / password)
 - **4 Clinics** with sample data
 - **8 Staff members** (doctors, nurses, managers)
@@ -210,12 +220,14 @@ php artisan migrate:fresh --seed
 ### Development Mode
 
 **Terminal 1 - Backend:**
+
 ```bash
 cd backend
 php artisan serve
 ```
 
 **Terminal 2 - Frontend:**
+
 ```bash
 cd frontend
 npm run dev
@@ -224,6 +236,7 @@ npm run dev
 ### Production Build
 
 **Frontend:**
+
 ```bash
 cd frontend
 npm run build
@@ -364,12 +377,14 @@ GET    /api/analytics/staff                   # Staff performance
 ## 👥 User Roles & Permissions
 
 ### Super Admin
+
 - Full system access
 - Manage all clinics and users
 - System configuration
 - View all analytics and reports
 
 ### Clinic Owner
+
 - Manage own clinic(s)
 - Manage staff and services
 - View clinic analytics
@@ -377,12 +392,14 @@ GET    /api/analytics/staff                   # Staff performance
 - Subscription management
 
 ### Doctor
+
 - View assigned appointments
 - Access patient medical records
 - Create prescriptions
 - Update appointment status
 
 ### Patient
+
 - Book appointments
 - View own appointments
 - Access medical records
@@ -392,11 +409,13 @@ GET    /api/analytics/staff                   # Staff performance
 ## 📸 Screenshots
 
 ### Public Pages
+
 - **Clinic Listing**: Browse all available clinics with search and filters
 - **Clinic Profile**: View clinic details, services, doctors, and reviews
 - **Appointment Booking**: Easy-to-use booking form for guests and registered users
 
 ### Admin Dashboard
+
 - **Analytics**: Comprehensive charts and KPIs
 - **Clinic Management**: Full CRUD operations
 - **Staff Management**: Add and manage doctors and staff
@@ -405,6 +424,7 @@ GET    /api/analytics/staff                   # Staff performance
 - **Settings**: System-wide configuration
 
 ### User Dashboard
+
 - **My Appointments**: View and manage upcoming appointments
 - **Medical Records**: Access health records
 - **Prescriptions**: View active prescriptions
@@ -436,6 +456,7 @@ We welcome contributions! Please follow these steps:
 ## 📝 Changelog
 
 ### Version 1.0.0 (Current)
+
 - ✅ Complete admin dashboard with 18+ pages
 - ✅ Public clinic browsing and profiles
 - ✅ Appointment booking system (guest & registered)
@@ -467,6 +488,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Authors
 
 **Jumaa Almarrzouk**
+
 - GitHub: [@almarzouk](https://github.com/almarzouk)
 
 ## 🙏 Acknowledgments

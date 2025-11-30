@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Admin Dashboard
+
 - Complete admin dashboard with 18+ pages
 - Analytics dashboard with charts and KPIs
 - User management with role assignment
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Report generation
 
 #### Public Features
+
 - Public clinic listing page with search and filters
 - Individual clinic profile pages
 - Service catalog display
@@ -36,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Responsive design for all devices
 
 #### Clinic Owner Features
+
 - Clinic profile management
 - Branch management
 - Staff invitation system
@@ -46,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Subscription handling
 
 #### Patient Features
+
 - Patient dashboard
 - Appointment booking (with and without registration)
 - Medical records access
@@ -54,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profile management
 
 #### Technical Features
+
 - Laravel 11 backend with modular architecture
 - Next.js 16 frontend with App Router
 - SQLite database (development)
@@ -67,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - German localization (de-DE)
 
 #### Database
+
 - Complete migration system
 - Comprehensive database seeders
 - 32 sample reviews with ratings
@@ -77,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Role and permission system
 
 ### Fixed
+
 - Review model relationship (Patient instead of User)
 - Appointment staff relationship naming
 - Frontend TypeScript interfaces
@@ -85,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clinic profile routing
 
 ### Security
+
 - UNIQUE constraint on reviews (patient_id + clinic_id)
 - Role-based data filtering
 - Sanctum token authentication
@@ -94,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
+
 - Email notifications via SMTP
 - SMS reminders
 - Payment gateway integration

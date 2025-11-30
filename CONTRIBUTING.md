@@ -7,6 +7,7 @@ Thank you for considering contributing to Mien Termin! We welcome contributions 
 ### Reporting Bugs
 
 If you find a bug, please open an issue on GitHub with:
+
 - A clear title and description
 - Steps to reproduce the bug
 - Expected behavior
@@ -17,6 +18,7 @@ If you find a bug, please open an issue on GitHub with:
 ### Suggesting Features
 
 We love feature requests! Please open an issue with:
+
 - A clear title and description
 - Why this feature would be useful
 - How it should work
@@ -35,12 +37,14 @@ We love feature requests! Please open an issue with:
 ### Coding Standards
 
 #### Backend (PHP/Laravel)
+
 - Follow PSR-12 coding standards
 - Use meaningful variable and function names
 - Add PHPDoc comments for classes and methods
 - Keep functions small and focused
 
 #### Frontend (TypeScript/React)
+
 - Use TypeScript for all new code
 - Follow the existing code structure
 - Use functional components with hooks
@@ -50,6 +54,7 @@ We love feature requests! Please open an issue with:
 ### Commit Messages
 
 Write clear commit messages:
+
 - Use present tense ("Add feature" not "Added feature")
 - Use imperative mood ("Move cursor to..." not "Moves cursor to...")
 - Start with a capital letter
@@ -57,6 +62,7 @@ Write clear commit messages:
 - Add detailed description if needed
 
 Example:
+
 ```
 Add patient review filtering
 
