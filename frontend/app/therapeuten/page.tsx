@@ -1,0 +1,224 @@
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  CheckCircle2,
+  Calendar,
+  Users,
+  Clock,
+  BarChart3,
+  Shield,
+  Smartphone,
+} from "lucide-react";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import PageHero from "@/components/page-hero";
+
+export default function TherapeutenPage() {
+  const features = [
+    {
+      icon: Calendar,
+      title: "Flexible Terminplanung",
+      description:
+        "Online-Buchung für Einzel- und Gruppensitzungen mit individuellen Zeitfenstern.",
+    },
+    {
+      icon: Users,
+      title: "Klientenverwaltung",
+      description:
+        "Sichere Verwaltung von Klientendaten, Therapiezielen und Behandlungsverläufen.",
+    },
+    {
+      icon: Clock,
+      title: "Erinnerungen & Recall",
+      description:
+        "Automatische Terminerinnerungen und Nachfass-System für kontinuierliche Betreuung.",
+    },
+    {
+      icon: BarChart3,
+      title: "Therapie-Analytics",
+      description:
+        "Übersicht über Behandlungsfortschritte, Auslastung und Sitzungsfrequenz.",
+    },
+    {
+      icon: Shield,
+      title: "Höchste Vertraulichkeit",
+      description:
+        "DSGVO-konforme Datenhaltung mit höchsten Sicherheitsstandards für Therapiedaten.",
+    },
+    {
+      icon: Smartphone,
+      title: "Mobile Verfügbarkeit",
+      description:
+        "Zugriff auf Terminkalender und Klienteninformationen von jedem Gerät.",
+    },
+  ];
+
+  const stats = [
+    { number: "400+", label: "Therapeuten" },
+    { number: "80%", label: "Weniger No-Shows" },
+    { number: "10h", label: "Zeitersparnis pro Woche" },
+    { number: "99.9%", label: "Verfügbarkeit" },
+  ];
+
+  return (
+    <>
+      <Navbar />
+      <PageHero
+        icon={Users}
+        title="Terminverwaltung für Therapeuten"
+        description="Professionelle Terminverwaltung für Psychotherapeuten, Physiotherapeuten und alle therapeutischen Fachrichtungen. Mehr Zeit für Ihre Klienten."
+        breadcrumbs={[
+          { label: "Start", href: "/" },
+          { label: "Lösungen", href: "/#solutions" },
+          { label: "Therapeuten", href: "/therapeuten" },
+        ]}
+        ctaText="Jetzt 14 Tage kostenlos testen"
+        ctaHref="/register"
+      />
+
+      {/* Features Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Speziell für therapeutische Praxen entwickelt
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Unsere Lösung berücksichtigt die besonderen Anforderungen
+              therapeutischer Berufe
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <Card
+                key={index}
+                className="p-6 hover:shadow-lg transition-shadow"
+              >
+                <feature.icon className="h-12 w-12 text-blue-600 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                Warum MeinTermin für Ihre therapeutische Praxis?
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">
+                      Vertraulichkeit garantiert
+                    </h3>
+                    <p className="text-gray-600">
+                      Höchste Datenschutzstandards für sensible Therapiedaten
+                      und Klienteninformationen
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">
+                      Flexible Sitzungsplanung
+                    </h3>
+                    <p className="text-gray-600">
+                      Einzel- und Gruppensitzungen, verschiedene Therapiearten
+                      und individuelle Dauern
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">
+                      Kontinuitäts-Management
+                    </h3>
+                    <p className="text-gray-600">
+                      Automatische Erinnerungen für Folgetermine und
+                      langfristige Therapiepläne
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold mb-1">Einfache Abrechnung</h3>
+                    <p className="text-gray-600">
+                      Übersicht über Sitzungen, Abrechnungsstatus und
+                      Kostenträger
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              {stats.map((stat, index) => (
+                <Card key={index} className="p-6 text-center">
+                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                    {stat.number}
+                  </div>
+                  <div className="text-gray-600">{stat.label}</div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonial Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <Card className="p-8 md:p-12 bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+            <div className="flex flex-col items-center text-center">
+              <div className="text-6xl mb-6">"</div>
+              <p className="text-xl md:text-2xl mb-6 leading-relaxed">
+                Als Psychotherapeutin schätze ich besonders die einfache
+                Online-Terminbuchung und die automatischen Erinnerungen. Meine
+                Klienten finden es sehr komfortabel, und ich habe deutlich
+                weniger Ausfälle.
+              </p>
+              <div className="border-t border-white/30 pt-6 w-full">
+                <p className="font-semibold text-lg">Dr. Sarah Weber</p>
+                <p className="text-blue-100">
+                  Praxis für Psychotherapie, Hamburg
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+            Bereit für mehr Zeit für Ihre Klienten?
+          </h2>
+          <p className="text-xl text-gray-600 mb-8">
+            Starten Sie jetzt Ihre kostenlose 14-Tage-Testphase – ohne
+            Kreditkarte, ohne Risiko
+          </p>
+          <Button
+            size="lg"
+            className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6"
+          >
+            Jetzt kostenlos testen
+          </Button>
+        </div>
+      </section>
+
+      <Footer />
+    </>
+  );
+}

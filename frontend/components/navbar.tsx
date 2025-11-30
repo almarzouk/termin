@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Menu,
   X,
@@ -20,11 +30,45 @@ import {
   Shield,
   Smartphone,
   Zap,
+  LayoutDashboard,
+  UserCircle,
+  LogOut,
 } from "lucide-react";
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  roles?: string[];
+}
+
 export default function Navbar() {
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    router.push("/");
+    router.refresh();
+  };
 
   const megaMenus = {
     solutions: {
@@ -91,7 +135,6 @@ export default function Navbar() {
           items: [
             { name: "Blog", href: "/blog", icon: FileText },
             { name: "Hilfezentrum", href: "/help", icon: HelpCircle },
-            { name: "Webinare", href: "/webinars", icon: Users },
             { name: "API Dokumentation", href: "/api-docs", icon: FileText },
           ],
         },
@@ -232,12 +275,12 @@ export default function Navbar() {
             </div>
 
             {/* Simple Links */}
-            <Link
-              href="/pricing"
+            <a
+              href="/#pricing"
               className="px-4 py-2 text-gray-600 hover:text-gray-900 transition rounded-lg hover:bg-gray-50"
             >
               Preise
-            </Link>
+            </a>
             <Link
               href="/contact"
               className="px-4 py-2 text-gray-600 hover:text-gray-900 transition rounded-lg hover:bg-gray-50"
@@ -246,14 +289,60 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons / User Menu */}
           <div className="hidden lg:flex items-center space-x-3">
-            <Link href="/login">
-              <Button variant="ghost">Anmelden</Button>
-            </Link>
-            <Link href="/register">
-              <Button>Kostenlos starten</Button>
-            </Link>
+            {user ? (
+              /* Logged in - Show Avatar with Dropdown */
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center space-x-2 hover:opacity-80 transition">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                        {user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{user.name}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/dashboard/account")}
+                  >
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profil
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-600"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Abmelden
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              /* Not logged in - Show Login/Register buttons */
+              <>
+                <Link href="/login">
+                  <Button variant="ghost">Anmelden</Button>
+                </Link>
+                <Link href="/register">
+                  <Button>Kostenlos starten</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -330,7 +419,7 @@ export default function Navbar() {
               </details>
 
               <Link
-                href="/pricing"
+                href="/#pricing"
                 className="p-3 text-gray-700 hover:bg-gray-50 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -345,14 +434,60 @@ export default function Navbar() {
               </Link>
 
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-100">
-                <Link href="/login">
-                  <Button variant="ghost" className="w-full">
-                    Anmelden
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button className="w-full">Kostenlos starten</Button>
-                </Link>
+                {user ? (
+                  /* Logged in - Show user info and logout */
+                  <>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                            {user.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <Link href="/dashboard">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard/account">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        Profil
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Abmelden
+                    </Button>
+                  </>
+                ) : (
+                  /* Not logged in - Show login/register */
+                  <>
+                    <Link href="/login">
+                      <Button variant="ghost" className="w-full">
+                        Anmelden
+                      </Button>
+                    </Link>
+                    <Link href="/register">
+                      <Button className="w-full">Kostenlos starten</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
