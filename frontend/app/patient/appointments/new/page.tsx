@@ -27,11 +27,19 @@ import {
 import api from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
 
+interface Clinic {
+  id: number;
+  name: string;
+  address?: string;
+  phone?: string;
+}
+
 interface Doctor {
   id: number;
   name: string;
   specialization: string;
   clinic_name: string;
+  clinic_id?: number;
 }
 
 interface Service {
@@ -40,6 +48,7 @@ interface Service {
   description: string;
   duration: number;
   price: number;
+  clinic_id?: number;
 }
 
 interface TimeSlot {
@@ -47,16 +56,24 @@ interface TimeSlot {
   available: boolean;
 }
 
+interface ClinicCapacity {
+  total_capacity: number;
+  booked: number;
+  available: number;
+  utilization_percentage: number;
+}
+
 export default function BookAppointmentPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [capacity, setCapacity] = useState<ClinicCapacity | null>(null);
 
   const [formData, setFormData] = useState({
-    doctor_id: "",
+    clinic_id: "",
     service_id: "",
     appointment_date: new Date(),
     appointment_time: "",
@@ -64,141 +81,138 @@ export default function BookAppointmentPage() {
   });
 
   useEffect(() => {
-    fetchDoctors();
-    fetchServices();
+    fetchClinics();
   }, []);
 
+  // Fetch services when clinic is selected
   useEffect(() => {
-    if (formData.doctor_id && formData.appointment_date) {
-      fetchAvailableSlots();
+    if (formData.clinic_id) {
+      fetchServices(parseInt(formData.clinic_id));
     }
-  }, [formData.doctor_id, formData.appointment_date]);
+  }, [formData.clinic_id]);
 
-  const fetchDoctors = async () => {
+  useEffect(() => {
+    if (formData.clinic_id && formData.appointment_date) {
+      fetchAvailableSlots();
+      fetchCapacity();
+    }
+  }, [formData.clinic_id, formData.service_id, formData.appointment_date]);
+
+  const fetchCapacity = async () => {
     try {
-      const response = await api.doctors.getAll();
-      const doctorsList = Array.isArray(response.data)
-        ? response.data
-        : response.data?.data || [];
-      setDoctors(doctorsList);
+      if (!formData.clinic_id) return;
+
+      const dateStr = formData.appointment_date.toISOString().split("T")[0];
+      const response = await api.appointments.getClinicCapacity({
+        clinic_id: parseInt(formData.clinic_id),
+        date: dateStr,
+      });
+
+      if (response.data) {
+        setCapacity(response.data);
+      }
     } catch (error) {
-      console.error("Error fetching doctors:", error);
-      // Use mock data as fallback
-      setDoctors([
-        {
-          id: 1,
-          name: "Dr. Anna Schmidt",
-          specialization: "Kardiologie",
-          clinic_name: "Herzzentrum Berlin",
-        },
-        {
-          id: 2,
-          name: "Dr. Michael Müller",
-          specialization: "Neurologie",
-          clinic_name: "Neuro-Klinik Hamburg",
-        },
-        {
-          id: 3,
-          name: "Dr. Sarah Weber",
-          specialization: "Pädiatrie",
-          clinic_name: "Kinderklinik München",
-        },
-      ]);
+      console.error("Error fetching capacity:", error);
     }
   };
 
-  const fetchServices = async () => {
+  const fetchClinics = async () => {
     try {
-      const response = await api.services.getAll();
-      const servicesList = Array.isArray(response.data)
+      const response = await api.clinics.getAll();
+      const clinicsList = Array.isArray(response.data)
         ? response.data
         : response.data?.data || [];
+      setClinics(clinicsList);
+    } catch (error) {
+      console.error("Error fetching clinics:", error);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Laden der Kliniken",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchServices = async (clinicId?: number) => {
+    try {
+      const response = await api.services.getAll();
+      let servicesList = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || [];
+
+      // Filter services by clinic_id if provided
+      if (clinicId) {
+        servicesList = servicesList.filter(
+          (service: Service) => service.clinic_id === clinicId
+        );
+      }
+
       setServices(servicesList);
     } catch (error) {
       console.error("Error fetching services:", error);
-      // Use mock data as fallback
-      setServices([
-        {
-          id: 1,
-          name: "Routineuntersuchung",
-          description: "Allgemeine Gesundheitsuntersuchung",
-          duration: 30,
-          price: 50,
-        },
-        {
-          id: 2,
-          name: "Beratung",
-          description: "Medizinische Beratung und Diagnose",
-          duration: 45,
-          price: 80,
-        },
-        {
-          id: 3,
-          name: "Nachsorge",
-          description: "Nachsorgeuntersuchung",
-          duration: 20,
-          price: 40,
-        },
-      ]);
+      setServices([]);
     }
   };
+
+  // Removed unused fetchServicesFallback function
 
   const fetchAvailableSlots = async () => {
     try {
       const dateStr = formData.appointment_date.toISOString().split("T")[0];
-      const response = await api.appointments.checkAvailability({
-        doctor_id: parseInt(formData.doctor_id),
-        date: dateStr,
-      });
 
-      // Handle different response structures
-      let slots = [];
-      if (response.data?.available_slots) {
-        slots = response.data.available_slots;
-      } else if (Array.isArray(response.data)) {
-        slots = response.data;
-      } else if (response.available_slots) {
-        slots = response.available_slots;
+      // Get clinic_id
+      const clinicId = formData.clinic_id || clinics[0]?.id;
+
+      if (!clinicId) {
+        console.warn("No clinic selected");
+        setAvailableSlots([]);
+        return;
       }
 
-      if (slots.length > 0) {
-        setAvailableSlots(slots);
+      // Use Smart Distribution API to get available slots
+      const response = await api.appointments.getAvailableSlots({
+        clinic_id: parseInt(clinicId),
+        date: dateStr,
+        service_id: formData.service_id
+          ? parseInt(formData.service_id)
+          : undefined,
+      });
+
+      if (response.data?.slots && Array.isArray(response.data.slots)) {
+        // Remove duplicates by using a Set for unique times
+        const uniqueTimes = new Set<string>();
+        response.data.slots.forEach((slot: any) => {
+          uniqueTimes.add(slot.time);
+        });
+
+        // Map unique times to the format expected by the UI
+        const formattedSlots = Array.from(uniqueTimes)
+          .map((time) => ({
+            time,
+            available: true,
+          }))
+          .sort((a, b) => a.time.localeCompare(b.time));
+
+        setAvailableSlots(formattedSlots);
       } else {
-        generateDefaultSlots();
+        setAvailableSlots([]);
       }
     } catch (error) {
       console.error("Error fetching available slots:", error);
-      // Generate default slots if API fails
-      generateDefaultSlots();
-    }
-  };
-
-  const generateDefaultSlots = () => {
-    const slots: TimeSlot[] = [];
-    for (let hour = 9; hour <= 17; hour++) {
-      slots.push({
-        time: `${hour.toString().padStart(2, "0")}:00`,
-        available: Math.random() > 0.3,
+      setAvailableSlots([]);
+      toast({
+        title: "Hinweis",
+        description: "Keine verfügbaren Termine für das ausgewählte Datum",
+        variant: "default",
       });
-      if (hour < 17) {
-        slots.push({
-          time: `${hour.toString().padStart(2, "0")}:30`,
-          available: Math.random() > 0.3,
-        });
-      }
     }
-    setAvailableSlots(slots);
   };
 
-  const handleSubmit = async () => {
-    if (
-      !formData.doctor_id ||
-      !formData.service_id ||
-      !formData.appointment_time
-    ) {
+  const handleBooking = async () => {
+    if (!formData.clinic_id || !formData.appointment_time) {
       toast({
         title: "Fehler",
-        description: "Bitte füllen Sie alle erforderlichen Felder aus",
+        description: "Bitte wählen Sie eine Klinik, ein Datum und eine Uhrzeit",
         variant: "destructive",
       });
       return;
@@ -209,27 +223,177 @@ export default function BookAppointmentPage() {
 
       const dateStr = formData.appointment_date.toISOString().split("T")[0];
 
-      await api.appointments.create({
-        doctor_id: parseInt(formData.doctor_id),
-        service_id: parseInt(formData.service_id),
+      // Get current user's patient_id
+      const userData = localStorage.getItem("user");
+      const user = userData ? JSON.parse(userData) : null;
+
+      if (!user?.id) {
+        toast({
+          title: "Fehler",
+          description: "Bitte melden Sie sich an.",
+          variant: "destructive",
+        });
+        router.push("/auth/login");
+        return;
+      }
+
+      console.log("👤 User data:", user);
+
+      let patientId = user?.patient_id;
+
+      // If patient_id not in localStorage, fetch from API
+      if (!patientId) {
+        console.warn("⚠️ patient_id not found, fetching from API...");
+        try {
+          const response = await api.auth.me();
+          console.log("📥 API response:", response.data);
+          patientId = response.data?.user?.patient_id;
+
+          // Update localStorage with new data
+          if (patientId) {
+            const updatedUser = { ...user, patient_id: patientId };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            console.log("✅ Updated user data with patient_id:", patientId);
+          } else {
+            console.error("❌ No patient_id in API response");
+          }
+        } catch (error) {
+          console.error("❌ Failed to fetch user data:", error);
+        }
+      }
+
+      console.log("👤 Final Patient ID:", patientId);
+
+      // If still no patient_id after API call, show error but don't redirect
+      if (!patientId) {
+        toast({
+          title: "Fehler",
+          description:
+            "Kein Patientenprofil gefunden. Bitte kontaktieren Sie den Support.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Use Smart Distribution to find best doctor automatically
+      let doctorId = null;
+
+      console.log("🤖 Using Smart Distribution to find best doctor...");
+      try {
+        const bestDoctorResponse = await api.appointments.findBestDoctor({
+          clinic_id: parseInt(formData.clinic_id),
+          date: dateStr,
+          time: formData.appointment_time,
+          service_id: formData.service_id
+            ? parseInt(formData.service_id)
+            : undefined,
+        });
+
+        if (bestDoctorResponse.data?.doctor_id) {
+          doctorId = bestDoctorResponse.data.doctor_id;
+          console.log(
+            "✅ Best doctor assigned:",
+            bestDoctorResponse.data.doctor_name,
+            "(ID:",
+            doctorId,
+            ")"
+          );
+
+          toast({
+            title: "Automatische Zuweisung",
+            description: `Dr. ${bestDoctorResponse.data.doctor_name} wurde automatisch zugewiesen`,
+          });
+        }
+      } catch (error) {
+        console.error("❌ Failed to find best doctor:", error);
+        toast({
+          title: "Fehler",
+          description:
+            "Kein verfügbarer Arzt für den gewählten Zeitpunkt gefunden.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!doctorId) {
+        toast({
+          title: "Fehler",
+          description:
+            "Kein verfügbarer Arzt für den gewählten Zeitpunkt gefunden.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      } // Format time as HH:mm:ss
+      const timeFormatted =
+        formData.appointment_time.length === 5
+          ? `${formData.appointment_time}:00`
+          : formData.appointment_time;
+
+      const appointmentData: any = {
+        clinic_id: parseInt(formData.clinic_id),
+        patient_id: patientId,
+        staff_id: doctorId,
         appointment_date: dateStr,
-        appointment_time: formData.appointment_time,
+        start_time: timeFormatted,
         notes: formData.notes,
+      };
+
+      // Add service_id only if selected
+      if (formData.service_id) {
+        appointmentData.service_id = parseInt(formData.service_id);
+      }
+
+      console.log("📤 Sending appointment data:", appointmentData);
+      console.log("📤 All fields present?", {
+        clinic_id: !!appointmentData.clinic_id,
+        patient_id: !!appointmentData.patient_id,
+        service_id: !!appointmentData.service_id,
+        staff_id: !!appointmentData.staff_id,
+        appointment_date: !!appointmentData.appointment_date,
+        start_time: !!appointmentData.start_time,
       });
+
+      const response = await api.appointments.create(appointmentData);
+
+      console.log("✅ Appointment created successfully:", response);
 
       toast({
         title: "Erfolg!",
         description: "Ihr Termin wurde erfolgreich gebucht",
       });
 
+      // Refresh capacity and available slots after successful booking
+      await fetchCapacity();
+      await fetchAvailableSlots();
+
       setTimeout(() => {
         router.push("/patient/appointments");
-      }, 2000);
-    } catch (error) {
-      console.error("Error booking appointment:", error);
+      }, 1500);
+    } catch (error: any) {
+      console.error("❌ Full error object:", error);
+      console.error("❌ Error type:", typeof error);
+      console.error("❌ Error message:", error?.message);
+      console.error("❌ Error response:", error?.response?.data);
+      console.error("❌ Error status:", error?.response?.status);
+      console.error("❌ Has response?:", !!error?.response);
+
+      let errorMessage = "Termin konnte nicht gebucht werden";
+
+      if (error?.response?.data) {
+        errorMessage =
+          error.response.data.message ||
+          error.response.data.error ||
+          JSON.stringify(error.response.data);
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Fehler",
-        description: "Termin konnte nicht gebucht werden",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -237,9 +401,6 @@ export default function BookAppointmentPage() {
     }
   };
 
-  const selectedDoctor = doctors.find(
-    (d) => d.id === parseInt(formData.doctor_id)
-  );
   const selectedService = services.find(
     (s) => s.id === parseInt(formData.service_id)
   );
@@ -259,7 +420,8 @@ export default function BookAppointmentPage() {
           </Button>
           <h1 className="text-3xl font-bold text-gray-900">Termin buchen</h1>
           <p className="text-gray-600 mt-2">
-            Buchen Sie einen Termin mit Ihrem Arzt
+            Wählen Sie eine Klinik, Datum und Uhrzeit - wir finden automatisch
+            den besten verfügbaren Arzt für Sie
           </p>
         </div>
 
@@ -288,39 +450,50 @@ export default function BookAppointmentPage() {
             ))}
           </div>
           <div className="flex justify-center mt-2 gap-16">
-            <span className="text-sm">Arzt wählen</span>
+            <span className="text-sm">Klinik wählen</span>
             <span className="text-sm">Datum & Zeit</span>
             <span className="text-sm">Bestätigen</span>
           </div>
         </div>
 
-        {/* Step 1: Select Doctor and Service */}
+        {/* Step 1: Select Clinic, Doctor and Service */}
         {step === 1 && (
           <Card className="p-6">
-            <h2 className="text-xl font-bold mb-6">Arzt und Leistung wählen</h2>
+            <h2 className="text-xl font-bold mb-4">Klinik wählen</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              <strong>Hinweis:</strong> Sie müssen nur die Klinik auswählen.
+              Arzt und Leistung sind optional. Das System findet automatisch den
+              besten verfügbaren Arzt für Ihren gewünschten Termin.
+            </p>
 
             <div className="space-y-6">
               <div>
-                <Label htmlFor="doctor">Arzt auswählen *</Label>
+                <Label htmlFor="clinic">Klinik auswählen *</Label>
                 <Select
-                  value={formData.doctor_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, doctor_id: value })
-                  }
+                  value={formData.clinic_id}
+                  onValueChange={(value) => {
+                    setFormData({
+                      ...formData,
+                      clinic_id: value,
+                      service_id: "",
+                    });
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Wählen Sie einen Arzt" />
+                    <SelectValue placeholder="Wählen Sie eine Klinik" />
                   </SelectTrigger>
                   <SelectContent>
-                    {doctors.map((doctor) => (
-                      <SelectItem key={doctor.id} value={doctor.id.toString()}>
+                    {clinics.map((clinic) => (
+                      <SelectItem key={clinic.id} value={clinic.id.toString()}>
                         <div className="flex items-center gap-2">
-                          <Stethoscope className="h-4 w-4" />
+                          <MapPin className="h-4 w-4" />
                           <div>
-                            <p className="font-medium">{doctor.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {doctor.specialization} - {doctor.clinic_name}
-                            </p>
+                            <p className="font-medium">{clinic.name}</p>
+                            {clinic.address && (
+                              <p className="text-sm text-gray-500">
+                                {clinic.address}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </SelectItem>
@@ -330,15 +503,25 @@ export default function BookAppointmentPage() {
               </div>
 
               <div>
-                <Label htmlFor="service">Leistung auswählen *</Label>
+                <Label htmlFor="service">
+                  Leistung auswählen{" "}
+                  <span className="text-gray-400 text-sm">(Optional)</span>
+                </Label>
                 <Select
                   value={formData.service_id}
                   onValueChange={(value) =>
                     setFormData({ ...formData, service_id: value })
                   }
+                  disabled={!formData.clinic_id}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Wählen Sie eine Leistung" />
+                    <SelectValue
+                      placeholder={
+                        formData.clinic_id
+                          ? "Wählen Sie eine Leistung (optional)"
+                          : "Bitte wählen Sie zuerst eine Klinik"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {services.map((service) => (
@@ -362,7 +545,7 @@ export default function BookAppointmentPage() {
               <div className="flex justify-end">
                 <Button
                   onClick={() => setStep(2)}
-                  disabled={!formData.doctor_id || !formData.service_id}
+                  disabled={!formData.clinic_id}
                 >
                   Weiter
                 </Button>
@@ -391,30 +574,77 @@ export default function BookAppointmentPage() {
               </div>
 
               <div>
-                <Label className="mb-2 block">Verfügbare Zeiten</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-                  {availableSlots.map((slot) => (
-                    <Button
-                      key={slot.time}
-                      variant={
-                        formData.appointment_time === slot.time
-                          ? "default"
-                          : "outline"
-                      }
-                      disabled={!slot.available}
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          appointment_time: slot.time,
-                        })
-                      }
-                      className="justify-start"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      {slot.time}
-                    </Button>
-                  ))}
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Verfügbare Zeiten</Label>
+                  {capacity && (
+                    <div className="text-sm">
+                      <span className="text-gray-600">Verfügbar: </span>
+                      <span
+                        className={`font-bold ${
+                          capacity.utilization_percentage > 80
+                            ? "text-red-600"
+                            : capacity.utilization_percentage > 50
+                            ? "text-orange-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {capacity.available}/{capacity.total_capacity}
+                      </span>
+                      <span className="text-gray-500 ml-2">
+                        ({Math.round(capacity.utilization_percentage)}% belegt)
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {availableSlots.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+                    <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>Keine verfügbaren Termine für dieses Datum</p>
+                    {formData.doctor_id ? (
+                      <p className="text-sm mt-1">
+                        Dieser Arzt hat keine verfügbaren Termine an diesem Tag
+                      </p>
+                    ) : (
+                      <p className="text-sm mt-1">
+                        Bitte wählen Sie ein anderes Datum
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+                    {availableSlots.map((slot, index) => (
+                      <Button
+                        key={`${slot.time}-${index}`}
+                        variant={
+                          formData.appointment_time === slot.time
+                            ? "default"
+                            : "outline"
+                        }
+                        disabled={!slot.available}
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            appointment_time: slot.time,
+                          })
+                        }
+                        className={`justify-start ${
+                          !slot.available
+                            ? "opacity-50 cursor-not-allowed bg-gray-100"
+                            : ""
+                        }`}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        {slot.time}
+                        {!slot.available && (
+                          <span className="ml-auto text-xs text-red-600">
+                            Belegt
+                          </span>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -439,28 +669,17 @@ export default function BookAppointmentPage() {
 
             <div className="space-y-4 mb-6">
               <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
-                <User className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="font-medium">Arzt</p>
-                  <p className="text-sm text-gray-600">
-                    {selectedDoctor?.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {selectedDoctor?.specialization}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                 <Stethoscope className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
                   <p className="font-medium">Leistung</p>
                   <p className="text-sm text-gray-600">
-                    {selectedService?.name}
+                    {selectedService?.name || "Allgemeine Konsultation"}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    Dauer: {selectedService?.duration} Minuten
-                  </p>
+                  {selectedService && (
+                    <p className="text-xs text-gray-500">
+                      Dauer: {selectedService.duration} Minuten
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -485,10 +704,23 @@ export default function BookAppointmentPage() {
               <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                 <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <p className="font-medium">Standort</p>
+                  <p className="font-medium">Klinik</p>
                   <p className="text-sm text-gray-600">
-                    {selectedDoctor?.clinic_name}
+                    {
+                      clinics.find((c) => c.id === parseInt(formData.clinic_id))
+                        ?.name
+                    }
                   </p>
+                  {clinics.find((c) => c.id === parseInt(formData.clinic_id))
+                    ?.address && (
+                    <p className="text-xs text-gray-500">
+                      {
+                        clinics.find(
+                          (c) => c.id === parseInt(formData.clinic_id)
+                        )?.address
+                      }
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -510,7 +742,7 @@ export default function BookAppointmentPage() {
               <Button variant="outline" onClick={() => setStep(2)}>
                 Zurück
               </Button>
-              <Button onClick={handleSubmit} disabled={loading}>
+              <Button onClick={handleBooking} disabled={loading}>
                 {loading ? (
                   "Wird gebucht..."
                 ) : (

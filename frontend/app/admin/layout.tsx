@@ -3,15 +3,26 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/dashboard/sidebar";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Bell, Mail, Settings, Search, Sun, Moon, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface User {
   id: number;
   name: string;
   email: string;
+  roles?: Array<{ name: string }>;
 }
 
 export default function AdminLayout({
@@ -25,40 +36,138 @@ export default function AdminLayout({
   const [isLoading, setIsLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
+    checkAuthAndPermissions();
+  }, [router, pathname]);
 
-    if (!token || !userData) {
+  const checkAuthAndPermissions = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
       router.push("/login");
       return;
     }
 
     try {
-      setUser(JSON.parse(userData));
+      // Fetch fresh user data from API
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/user`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("❌ API Response not OK:", response.status);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        router.push("/login");
+        return;
+      }
+
+      const data = await response.json();
+      const userData = data.data || data.user || data;
+
+      console.log("🔍 Admin Layout - Full Response:", data);
+      console.log("🔍 Admin Layout - User Data:", userData);
+      console.log("🔍 Admin Layout - Roles:", userData.roles);
+
+      // Check if user has admin role
+      const allowedRoles = [
+        "super_admin",
+        "clinic_owner",
+        "clinic_manager",
+        "manager",
+      ];
+
+      // Handle both formats: string[] or {name: string}[]
+      let userRoles: string[] = [];
+      if (Array.isArray(userData.roles)) {
+        if (userData.roles.length > 0) {
+          if (typeof userData.roles[0] === "string") {
+            userRoles = userData.roles;
+          } else if (userData.roles[0]?.name) {
+            userRoles = userData.roles.map((r: any) => r.name);
+          }
+        }
+      }
+
+      console.log("🔍 Admin Layout - Processed Roles:", userRoles);
+
+      const hasAccess =
+        userRoles.length > 0 &&
+        userRoles.some((role: string) => allowedRoles.includes(role));
+
+      console.log("🔍 Admin Layout - Has Access:", hasAccess);
+
+      if (!hasAccess) {
+        console.error("❌ Access Denied - User roles:", userRoles);
+        setShowAccessDenied(true);
+        return;
+      }
+
+      setUser(userData);
+      setAuthorized(true);
+
+      // Update localStorage with fresh data
+      localStorage.setItem("user", JSON.stringify(userData));
     } catch (error) {
-      console.error("Error parsing user data:", error);
+      console.error("Error checking auth:", error);
       router.push("/login");
     } finally {
       setIsLoading(false);
     }
-  }, [router, pathname]);
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">
+            Überprüfe Berechtigungen...
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (!user || !authorized) {
     return null;
   }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Access Denied Dialog */}
+      <AlertDialog open={showAccessDenied} onOpenChange={setShowAccessDenied}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zugriff verweigert</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sie haben keine Berechtigung, auf den Admin-Bereich zuzugreifen.
+              Bitte kontaktieren Sie Ihren Administrator, wenn Sie glauben, dass
+              dies ein Fehler ist.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowAccessDenied(false);
+                router.push("/dashboard");
+              }}
+            >
+              Zum Dashboard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -122,14 +231,7 @@ export default function AdminLayout({
               </Button>
 
               {/* Notifications */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative hidden sm:flex"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </Button>
+              <NotificationBell />
 
               {/* Messages */}
               <Button

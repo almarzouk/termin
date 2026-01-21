@@ -16,8 +16,13 @@ class ReviewController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $query = Review::with(['clinic', 'patient', 'appointment.staff'])
-            ->orderBy('created_at', 'desc');
+        $query = Review::with([
+            'clinic',
+            'patient' => function ($q) {
+                $q->withTrashed(); // Include soft-deleted patients
+            },
+            'appointment.staff'
+        ])->orderBy('created_at', 'desc');
 
         // Filter by clinic for clinic_owner
         if ($user->hasRole('clinic_owner') && $user->clinic_id) {
@@ -65,7 +70,13 @@ class ReviewController extends Controller
     public function show($id)
     {
         $user = Auth::user();
-        $review = Review::with(['clinic', 'patient', 'appointment.staff'])->findOrFail($id);
+        $review = Review::with([
+            'clinic',
+            'patient' => function ($q) {
+                $q->withTrashed();
+            },
+            'appointment.staff'
+        ])->findOrFail($id);
 
         // Check permission
         if ($user->hasRole('clinic_owner') && $review->clinic_id !== $user->clinic_id) {

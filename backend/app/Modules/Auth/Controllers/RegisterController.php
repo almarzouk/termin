@@ -34,6 +34,19 @@ class RegisterController extends Controller
         // Assign customer role by default
         $user->assignRole('customer');
 
+        // Create patient record for customer
+        $nameParts = explode(' ', $user->name, 2);
+        $patient = \App\Modules\Patient\Models\Patient::create([
+            'user_id' => $user->id,
+            'patient_type' => 'self',
+            'first_name' => $nameParts[0] ?? $user->name ?? 'Unknown',
+            'last_name' => $nameParts[1] ?? '',
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'gender' => $user->gender,
+            'date_of_birth' => $user->date_of_birth,
+        ]);
+
         // Fire registered event for email verification
         event(new Registered($user));
 
@@ -48,6 +61,7 @@ class RegisterController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'clinic_id' => $user->clinic_id,
+                'patient_id' => $patient->id,
                 'roles' => $user->getRoleNames(),
             ],
             'token' => $token,

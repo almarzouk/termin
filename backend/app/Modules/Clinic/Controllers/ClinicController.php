@@ -8,6 +8,7 @@ use App\Modules\Clinic\Requests\UpdateClinicRequest;
 use App\Models\Clinic;
 use App\Models\ClinicBranch;
 use App\Models\ClinicStaff;
+use App\Services\SubscriptionLimitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -58,6 +59,19 @@ class ClinicController extends Controller
      */
     public function store(CreateClinicRequest $request)
     {
+        // Check subscription limits
+        $limitService = new SubscriptionLimitService();
+        $limitCheck = $limitService->canCreateClinic(auth()->user());
+
+        if (!$limitCheck['allowed']) {
+            return response()->json([
+                'success' => false,
+                'message' => $limitCheck['message'],
+                'current' => $limitCheck['current'],
+                'limit' => $limitCheck['limit'],
+            ], 403);
+        }
+
         DB::beginTransaction();
 
         try {

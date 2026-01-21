@@ -29,14 +29,11 @@ import {
   Lock,
   Database,
   FileText,
-  Bell,
   Cog,
-  Heart,
-  Receipt,
-  Tags,
   Star,
-  MapPin,
+  Plane,
 } from "lucide-react";
+import { Bell, Heart, Receipt, Tags, MapPin } from "lucide-react";
 
 const menuItems = [
   {
@@ -51,18 +48,45 @@ const menuItems = [
   },
 ];
 
+const patientMenuItems = [
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    href: "/dashboard",
+  },
+  {
+    icon: Calendar,
+    label: "Meine Termine",
+    href: "/patient/appointments",
+  },
+  {
+    icon: UserCircle,
+    label: "Ihr Konto",
+    href: "/dashboard/account",
+  },
+  {
+    icon: Mail,
+    label: "Nachrichten",
+    href: "/dashboard/mail",
+  },
+];
+
 const applications = [
   {
     icon: Calendar,
     label: "Terminplan",
     href: "/dashboard/schedule",
-    roles: [], // Available to all
-  },
-  {
-    icon: ClipboardList,
-    label: "Termine",
-    href: "/dashboard/appointment",
-    roles: [], // Available to all
+    roles: [
+      "doctor",
+      "nurse",
+      "receptionist",
+      "pharmacist",
+      "lab_technician",
+      "super_admin",
+      "clinic_owner",
+      "clinic_manager",
+      "manager",
+    ],
   },
   {
     icon: Building2,
@@ -168,6 +192,31 @@ const admin = [
     label: "Dienste",
     href: "/admin/services",
     roles: ["super_admin", "clinic_owner"],
+  },
+  {
+    icon: Calendar,
+    label: "Terminverwaltung",
+    href: "/admin/appointments",
+    roles: ["super_admin", "clinic_owner", "clinic_manager"],
+  },
+  {
+    icon: Plane,
+    label: "Urlaub & Verfügbarkeit",
+    href: "/admin/leave-management",
+    roles: ["super_admin", "clinic_owner", "clinic_manager"],
+  },
+  {
+    icon: Bell,
+    label: "Meine Benachrichtigungen",
+    href: "/admin/my-notifications",
+    roles: [
+      "super_admin",
+      "clinic_owner",
+      "clinic_manager",
+      "doctor",
+      "nurse",
+      "receptionist",
+    ],
   },
   {
     icon: Star,
@@ -356,24 +405,26 @@ export default function Sidebar({ onClose }: SidebarProps) {
         {/* Main Menu */}
         <div>
           <div className="space-y-1">
-            {menuItems.map((item) => {
-              const href =
-                item.label === "Dashboard" ? getDashboardHref() : item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={href}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition ${
-                    isActive(href)
-                      ? "bg-blue-50 text-blue-600 font-semibold"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
+            {(userRole === "patient" ? patientMenuItems : menuItems).map(
+              (item) => {
+                const href =
+                  item.label === "Dashboard" ? getDashboardHref() : item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition ${
+                      isActive(href)
+                        ? "bg-blue-50 text-blue-600 font-semibold"
+                        : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </Link>
+                );
+              }
+            )}
           </div>
         </div>
 

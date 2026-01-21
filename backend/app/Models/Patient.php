@@ -42,6 +42,8 @@ class Patient extends Model
         'chronic_conditions' => 'array',
     ];
 
+    protected $appends = ['full_name'];
+
     /**
      * Activity log options - Disabled temporarily
      */

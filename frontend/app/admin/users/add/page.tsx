@@ -6,11 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ClinicSelect } from "@/components/ui/clinic-select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useSubscriptionLimits } from "@/hooks/useSubscriptionLimits";
 
 export default function AddUserPage() {
   const router = useRouter();
@@ -21,6 +32,11 @@ export default function AddUserPage() {
   const [currentUserClinicId, setCurrentUserClinicId] = useState<number | null>(
     null
   );
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
+  const [limitType, setLimitType] = useState<"doctor" | "staff" | "">("");
+  const { limits, canCreateDoctor, canCreateStaff, refetch } =
+    useSubscriptionLimits();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -142,6 +158,30 @@ export default function AddUserPage() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Check subscription limits for doctors and staff (only for clinic_owner)
+    if (currentUserRole === "clinic_owner") {
+      if (formData.role === "doctor" && !canCreateDoctor()) {
+        setLimitType("doctor");
+        setLimitMessage(
+          `Sie haben das Limit von ${limits.doctors.limit} Ärzten erreicht. Um weitere Ärzte hinzuzufügen, müssen Sie Ihren Abonnementplan upgraden.`
+        );
+        setShowLimitDialog(true);
+        return;
+      } else if (
+        ["receptionist", "nurse", "pharmacist", "lab_technician"].includes(
+          formData.role
+        ) &&
+        !canCreateStaff()
+      ) {
+        setLimitType("staff");
+        setLimitMessage(
+          `Sie haben das Limit von ${limits.staff.limit} Mitarbeitern erreicht. Um weitere Mitarbeiter hinzuzufügen, müssen Sie Ihren Abonnementplan upgraden.`
+        );
+        setShowLimitDialog(true);
+        return;
+      }
     }
 
     if (formData.password.length < 8) {
@@ -390,6 +430,58 @@ export default function AddUserPage() {
           </div>
         </form>
       </Card>
+
+      {/* Limit Exceeded Dialog */}
+      <AlertDialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-orange-600" />
+              </div>
+              <AlertDialogTitle className="text-xl">
+                Limit erreicht
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base">
+              {limitMessage}
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-700 font-medium mb-2">
+                  Aktuelle Nutzung:
+                </p>
+                {limitType === "doctor" && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold text-blue-600">
+                      {limits.doctors.current} / {limits.doctors.limit}
+                    </span>{" "}
+                    Ärzte verwendet
+                  </p>
+                )}
+                {limitType === "staff" && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold text-blue-600">
+                      {limits.staff.current} / {limits.staff.limit}
+                    </span>{" "}
+                    Mitarbeiter verwendet
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => {
+                setShowLimitDialog(false);
+                router.push("/subscription-plans");
+              }}
+            >
+              Plan upgraden
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

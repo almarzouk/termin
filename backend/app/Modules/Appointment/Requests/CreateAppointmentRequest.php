@@ -23,7 +23,7 @@ class CreateAppointmentRequest extends FormRequest
             'clinic_id' => 'required|exists:clinics,id',
             'branch_id' => 'nullable|exists:clinic_branches,id',
             'patient_id' => 'required|exists:patients,id',
-            'service_id' => 'required|exists:services,id',
+            'service_id' => 'nullable|exists:services,id',
             'staff_id' => 'nullable|exists:clinic_staff,id',
             'appointment_date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|date_format:H:i:s',

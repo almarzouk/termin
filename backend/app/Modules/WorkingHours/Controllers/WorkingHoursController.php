@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\WorkingHours\Requests\CreateWorkingHoursRequest;
 use App\Modules\WorkingHours\Requests\UpdateWorkingHoursRequest;
 use App\Models\WorkingHours;
+use App\Models\StaffWorkingHours;
 use App\Models\Clinic;
 use App\Models\ClinicStaff;
 use Illuminate\Http\Request;
@@ -17,26 +18,58 @@ class WorkingHoursController extends Controller
      */
     public function index(Request $request)
     {
+        // If staff_id is provided, use StaffWorkingHours table
+        if ($request->has('staff_id')) {
+            $request->validate([
+                'staff_id' => 'required|exists:clinic_staff,id',
+                'clinic_id' => 'required|exists:clinics,id',
+            ]);
+
+            $workingHours = StaffWorkingHours::with(['staff.user'])
+                ->where('staff_id', $request->staff_id)
+                ->orderBy('day_of_week')
+                ->orderBy('start_time')
+                ->get();
+
+            // Convert day numbers to names
+            $dayMap = [
+                0 => 'sunday',
+                1 => 'monday',
+                2 => 'tuesday',
+                3 => 'wednesday',
+                4 => 'thursday',
+                5 => 'friday',
+                6 => 'saturday',
+            ];
+
+            $workingHours = $workingHours->map(function ($hour) use ($dayMap) {
+                return [
+                    'id' => $hour->id,
+                    'staff_id' => $hour->staff_id,
+                    'day_of_week' => $dayMap[$hour->day_of_week] ?? 'monday',
+                    'start_time' => $hour->start_time,
+                    'end_time' => $hour->end_time,
+                    'is_available' => $hour->is_available,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $workingHours->values(),
+            ]);
+        }
+
+        // Otherwise use clinic working hours
         $request->validate([
             'clinic_id' => 'required|exists:clinics,id',
-            'staff_id' => 'nullable|exists:clinic_staff,id',
         ]);
 
-        $query = WorkingHours::with(['clinic', 'staff.user'])
+        $query = WorkingHours::with(['clinic', 'branch'])
             ->where('clinic_id', $request->clinic_id);
-
-        if ($request->has('staff_id')) {
-            $query->where('staff_id', $request->staff_id);
-        }
 
         // Filter by day
         if ($request->has('day_of_week')) {
             $query->where('day_of_week', $request->day_of_week);
-        }
-
-        // Filter by availability
-        if ($request->has('is_available')) {
-            $query->where('is_available', $request->is_available);
         }
 
         $workingHours = $query->orderBy('day_of_week')
@@ -206,55 +239,45 @@ class WorkingHoursController extends Controller
     {
         $request->validate([
             'clinic_id' => 'required|exists:clinics,id',
-            'staff_id' => 'nullable|exists:clinic_staff,id',
-            'schedules' => 'required|array|min:1',
-            'schedules.*.day_of_week' => 'required|integer|min:0|max:6',
-            'schedules.*.start_time' => 'required|date_format:H:i',
-            'schedules.*.end_time' => 'required|date_format:H:i|after:schedules.*.start_time',
-            'schedules.*.is_available' => 'sometimes|boolean',
-        ], [
-            'clinic_id.required' => 'Bitte wählen Sie eine Klinik aus.',
-            'schedules.required' => 'Bitte geben Sie mindestens einen Zeitplan an.',
-            'schedules.*.day_of_week.required' => 'Der Wochentag ist erforderlich.',
-            'schedules.*.start_time.required' => 'Die Start-Uhrzeit ist erforderlich.',
-            'schedules.*.end_time.required' => 'Die End-Uhrzeit ist erforderlich.',
-            'schedules.*.end_time.after' => 'Die End-Uhrzeit muss nach der Start-Uhrzeit liegen.',
+            'staff_id' => 'required|exists:clinic_staff,id',
+            'working_hours' => 'required|array|min:1',
+            'working_hours.*.day_of_week' => 'required|string|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+            'working_hours.*.start_time' => 'required|date_format:H:i',
+            'working_hours.*.end_time' => 'required|date_format:H:i',
+            'working_hours.*.is_available' => 'required|boolean',
         ]);
 
         try {
             $createdHours = [];
 
-            foreach ($request->schedules as $schedule) {
-                // Check for overlaps
-                $overlap = WorkingHours::where('clinic_id', $request->clinic_id)
-                    ->where('day_of_week', $schedule['day_of_week'])
-                    ->when($request->staff_id, function ($q) use ($request) {
-                        $q->where('staff_id', $request->staff_id);
-                    })
-                    ->where(function ($q) use ($schedule) {
-                        $q->whereBetween('start_time', [$schedule['start_time'], $schedule['end_time']])
-                            ->orWhereBetween('end_time', [$schedule['start_time'], $schedule['end_time']])
-                            ->orWhere(function ($q2) use ($schedule) {
-                                $q2->where('start_time', '<=', $schedule['start_time'])
-                                    ->where('end_time', '>=', $schedule['end_time']);
-                            });
-                    })
-                    ->exists();
+            // Delete existing working hours for this staff
+            StaffWorkingHours::where('staff_id', $request->staff_id)->delete();
 
-                if ($overlap) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Überschneidung bei ' . $this->getDayName($schedule['day_of_week']) . '.',
-                    ], 422);
+            foreach ($request->working_hours as $schedule) {
+                // Skip if not available
+                if (!$schedule['is_available']) {
+                    continue;
                 }
 
-                $workingHours = WorkingHours::create([
-                    'clinic_id' => $request->clinic_id,
+                // Convert day name to number (0 = Sunday, 1 = Monday, etc.)
+                $dayMap = [
+                    'sunday' => 0,
+                    'monday' => 1,
+                    'tuesday' => 2,
+                    'wednesday' => 3,
+                    'thursday' => 4,
+                    'friday' => 5,
+                    'saturday' => 6,
+                ];
+
+                $dayNumber = $dayMap[$schedule['day_of_week']] ?? 1;
+
+                $workingHours = StaffWorkingHours::create([
                     'staff_id' => $request->staff_id,
-                    'day_of_week' => $schedule['day_of_week'],
+                    'day_of_week' => $dayNumber,
                     'start_time' => $schedule['start_time'],
                     'end_time' => $schedule['end_time'],
-                    'is_available' => $schedule['is_available'] ?? true,
+                    'is_available' => $schedule['is_available'],
                 ]);
 
                 $createdHours[] = $workingHours;

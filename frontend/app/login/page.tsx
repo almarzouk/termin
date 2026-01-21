@@ -51,10 +51,31 @@ export default function LoginPage() {
           roles: response.user.roles,
         });
 
-        // Redirect all users to /dashboard
-        // The dashboard will show different content based on user role
-        console.log(`🔀 Redirecting to /dashboard`);
-        router.push("/dashboard");
+        // Redirect based on user role
+        const userRoles = response.user.roles || [];
+        console.log("User roles:", userRoles);
+
+        // roles is an array of role names (strings)
+        const isAdmin = userRoles.some((roleName: string) =>
+          [
+            "super_admin",
+            "clinic_owner",
+            "clinic_manager",
+            "doctor",
+            "nurse",
+            "receptionist",
+          ].includes(roleName)
+        );
+
+        console.log("Is admin?", isAdmin);
+
+        if (isAdmin) {
+          console.log(`🔀 Redirecting to /admin/dashboard`);
+          router.push("/admin/dashboard");
+        } else {
+          console.log(`🔀 Redirecting to /dashboard`);
+          router.push("/dashboard");
+        }
       } else {
         setError("Ungültige Anmeldedaten");
       }

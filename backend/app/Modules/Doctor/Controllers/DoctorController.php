@@ -4,6 +4,7 @@ namespace App\Modules\Doctor\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Doctor\Models\Doctor;
+use App\Services\SubscriptionLimitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -31,6 +32,11 @@ class DoctorController extends Controller
             $query->where('specialty', $request->specialty);
         }
 
+        // Filter by clinic_id
+        if ($request->has('clinic_id')) {
+            $query->where('clinic_id', $request->clinic_id);
+        }
+
         // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -48,6 +54,19 @@ class DoctorController extends Controller
      */
     public function store(Request $request)
     {
+        // Check subscription limits
+        $limitService = new SubscriptionLimitService();
+        $limitCheck = $limitService->canCreateDoctor(auth()->user());
+
+        if (!$limitCheck['allowed']) {
+            return response()->json([
+                'success' => false,
+                'message' => $limitCheck['message'],
+                'current' => $limitCheck['current'],
+                'limit' => $limitCheck['limit'],
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:doctors,email',
@@ -104,6 +123,7 @@ class DoctorController extends Controller
             'consultation_fee' => 'nullable|numeric|min:0',
             'bio' => 'nullable|string',
             'status' => 'nullable|in:active,inactive',
+            'annual_leave_balance' => 'nullable|integer|min:0|max:365',
         ]);
 
         if ($validator->fails()) {

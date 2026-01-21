@@ -28,6 +28,19 @@ class Appointment extends Model
         'cancelled_at',
         'confirmed_at',
         'completed_at',
+        // Recurring appointment fields
+        'is_recurring',
+        'recurring_parent_id',
+        'recurring_pattern',
+        'recurring_interval',
+        'recurring_days',
+        'recurring_day_of_month',
+        'recurring_end_date',
+        'recurring_count',
+        'occurrence_number',
+        // Cancellation fee fields
+        'cancellation_fee',
+        'is_late_cancellation',
     ];
 
     protected $casts = [
@@ -36,9 +49,16 @@ class Appointment extends Model
         'cancelled_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
+        // Recurring fields
+        'is_recurring' => 'boolean',
+        'recurring_days' => 'array',
+        'recurring_end_date' => 'date',
+        // Cancellation fee fields
+        'cancellation_fee' => 'decimal:2',
+        'is_late_cancellation' => 'boolean',
     ];
 
-    protected $appends = ['appointment_date'];
+    protected $appends = ['appointment_date', 'appointment_time', 'appointment_number', 'patient_name', 'patient_phone', 'doctor_name', 'clinic_name', 'service_name'];
 
     /**
      * Get appointment date from start_time
@@ -46,6 +66,62 @@ class Appointment extends Model
     public function getAppointmentDateAttribute()
     {
         return $this->start_time ? $this->start_time->format('Y-m-d') : null;
+    }
+
+    /**
+     * Get appointment time from start_time
+     */
+    public function getAppointmentTimeAttribute()
+    {
+        return $this->start_time ? $this->start_time->format('H:i') : null;
+    }
+
+    /**
+     * Get appointment number (generate if not exists)
+     */
+    public function getAppointmentNumberAttribute()
+    {
+        return 'APT-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get patient name
+     */
+    public function getPatientNameAttribute()
+    {
+        return $this->patient && $this->patient->user ? $this->patient->user->name : 'N/A';
+    }
+
+    /**
+     * Get patient phone
+     */
+    public function getPatientPhoneAttribute()
+    {
+        return $this->patient ? $this->patient->phone : 'N/A';
+    }
+
+    /**
+     * Get doctor name
+     */
+    public function getDoctorNameAttribute()
+    {
+        return $this->doctor && $this->doctor->user ? $this->doctor->user->name : 'N/A';
+    }
+
+    /**
+     * Get clinic name
+     */
+    public function getClinicNameAttribute()
+    {
+        return $this->clinic ? $this->clinic->name : 'N/A';
+    }
+
+    /**
+     * Get service name
+     */
+    public function getServiceNameAttribute()
+    {
+        return $this->service ? $this->service->name : null;
     }
 
     /**
@@ -108,6 +184,14 @@ class Appointment extends Model
         return $this->belongsTo(ClinicStaff::class, 'staff_id');
     }
 
+    /**
+     * Alias for staff (doctor)
+     */
+    public function doctor()
+    {
+        return $this->belongsTo(ClinicStaff::class, 'staff_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -121,6 +205,22 @@ class Appointment extends Model
     public function history()
     {
         return $this->hasMany(AppointmentHistory::class);
+    }
+
+    public function reminders()
+    {
+        return $this->hasMany(AppointmentReminder::class);
+    }
+
+    public function recurringParent()
+    {
+        return $this->belongsTo(Appointment::class, 'recurring_parent_id');
+    }
+
+    public function recurringChildren()
+    {
+        return $this->hasMany(Appointment::class, 'recurring_parent_id')
+            ->orderBy('start_time');
     }
 
     /**
@@ -142,4 +242,56 @@ class Appointment extends Model
     {
         return $query->whereDate('start_time', now()->toDateString());
     }
+
+    public function scopeRecurring($query)
+    {
+        return $query->where('is_recurring', true);
+    }
+
+    public function scopeParentOnly($query)
+    {
+        return $query->whereNull('recurring_parent_id');
+    }
+
+    /**
+     * Helper methods
+     */
+    public function isRecurring()
+    {
+        return $this->is_recurring === true;
+    }
+
+    public function isRecurringChild()
+    {
+        return $this->recurring_parent_id !== null;
+    }
+
+    public function canBeCancelled()
+    {
+        // Get clinic's cancellation policy
+        $policy = CancellationPolicy::where('clinic_id', $this->clinic_id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$policy) {
+            return [
+                'allowed' => true,
+                'is_late' => false,
+            ];
+        }
+
+        return $policy->canCancelAt($this->start_time);
+    }
+
+    public function calculateCancellationFee()
+    {
+        $cancellationCheck = $this->canBeCancelled();
+
+        if (!$cancellationCheck['allowed'] && isset($cancellationCheck['is_late']) && $cancellationCheck['is_late']) {
+            return $cancellationCheck['fee'] ?? 0;
+        }
+
+        return 0;
+    }
+
 }

@@ -11,11 +11,16 @@ class Patient extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
+        'patient_type',
+        'first_name',
+        'last_name',
         'name',
         'email',
         'phone',
         'date_of_birth',
         'gender',
+        'blood_type',
         'blood_group',
         'address',
         'city',
@@ -25,19 +30,29 @@ class Patient extends Model
         'emergency_contact_phone',
         'medical_history',
         'allergies',
+        'chronic_diseases',
         'current_medications',
         'insurance_provider',
         'insurance_number',
+        'notes',
         'photo',
         'status',
-        'user_id',
+        // Pet-specific fields
+        'species',
+        'breed',
+        'weight',
+        'microchip_number',
+        'pet_data',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
         'medical_history' => 'array',
         'allergies' => 'array',
+        'chronic_diseases' => 'array',
         'current_medications' => 'array',
+        'pet_data' => 'array',
+        'weight' => 'decimal:2',
     ];
 
     protected $dates = ['deleted_at'];

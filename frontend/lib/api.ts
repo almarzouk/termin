@@ -84,6 +84,8 @@ apiClient.interceptors.response.use(
         status: error.response.status,
         message,
         url: error.config?.url,
+        data: error.response.data,
+        headers: error.response.headers,
       });
       throw new Error(message);
     } else if (error.request) {
@@ -135,6 +137,7 @@ export const api = {
       page?: number;
       search?: string;
       specialty?: string;
+      clinic_id?: number;
     }) => {
       return apiClient.get<PaginatedResponse<any>>("/doctors", { params });
     },
@@ -155,6 +158,33 @@ export const api = {
         params: { date },
       });
     },
+
+    // Appointment Settings
+    getAppointmentSettings: (doctorId: number) =>
+      apiClient.get<{ data: any }>(`/doctors/${doctorId}/appointment-settings`),
+
+    updateAppointmentSettings: (
+      doctorId: number,
+      data: {
+        max_daily_appointments: number;
+        appointment_duration_minutes: number;
+        allow_online_booking: boolean;
+      }
+    ) =>
+      apiClient.put<{ data: any; message: string }>(
+        `/doctors/${doctorId}/appointment-settings`,
+        data
+      ),
+
+    getDailyStats: (doctorId: number, date?: string) =>
+      apiClient.get<{ data: any }>(`/doctors/${doctorId}/daily-stats`, {
+        params: { date },
+      }),
+
+    getWeeklyStats: (doctorId: number, startDate?: string, endDate?: string) =>
+      apiClient.get<{ data: any }>(`/doctors/${doctorId}/weekly-stats`, {
+        params: { start_date: startDate, end_date: endDate },
+      }),
   },
 
   // Patients
@@ -192,6 +222,8 @@ export const api = {
     getById: (id: number) =>
       apiClient.get<{ data: any }>(`/appointments/${id}`),
 
+    getAllByPatient: () => apiClient.get<{ data: any[] }>("/appointments"),
+
     create: (data: any) =>
       apiClient.post<{ data: any; message: string }>("/appointments", data),
 
@@ -201,8 +233,11 @@ export const api = {
         data
       ),
 
-    cancel: (id: number) =>
-      apiClient.post<{ message: string }>(`/appointments/${id}/cancel`),
+    cancel: (id: number, reason?: string) =>
+      apiClient.post<{ message: string; fee?: number; is_late?: boolean }>(
+        `/appointments/${id}/cancel`,
+        { cancellation_reason: reason }
+      ),
 
     confirm: (id: number) =>
       apiClient.post<{ message: string }>(`/appointments/${id}/confirm`),
@@ -210,11 +245,171 @@ export const api = {
     delete: (id: number) =>
       apiClient.delete<{ message: string }>(`/appointments/${id}`),
 
-    checkAvailability: (params: { doctor_id: number; date: string }) =>
+    checkAvailability: (params: {
+      clinic_id: number;
+      service_id: number;
+      date: string;
+      staff_id?: number;
+    }) =>
       apiClient.post<{ data: any[] }>(
         "/appointments/check-availability",
         params
       ),
+
+    // Appointment Availability & Distribution
+    getAvailableSlots: (params: {
+      clinic_id: number;
+      date: string;
+      service_id?: number;
+      doctor_id?: number;
+    }) =>
+      apiClient.get<{
+        data: {
+          date: string;
+          total_slots: number;
+          slots: Array<{
+            time: string;
+            doctor_id: number;
+            doctor_name: string;
+            specialty: string;
+            duration: number;
+          }>;
+        };
+      }>("/appointments/available-slots", { params }),
+
+    getClinicCapacity: (params: { clinic_id: number; date: string }) =>
+      apiClient.get<{
+        data: {
+          date: string;
+          total_capacity: number;
+          booked: number;
+          available: number;
+          utilization_percentage: number;
+        };
+      }>("/appointments/clinic-capacity", { params }),
+
+    findBestDoctor: (data: {
+      clinic_id: number;
+      date: string;
+      time: string;
+      service_id?: number;
+    }) =>
+      apiClient.post<{
+        data: {
+          doctor_id: number;
+          doctor_name: string;
+          specialty: string;
+          duration: number;
+        };
+      }>("/appointments/find-best-doctor", data),
+
+    getNextAvailable: (params: { clinic_id: number; start_date?: string }) =>
+      apiClient.get<{
+        data: {
+          date: string;
+          slot: {
+            time: string;
+            doctor_id: number;
+            doctor_name: string;
+            specialty: string;
+            duration: number;
+          };
+          available_count: number;
+        };
+      }>("/appointments/next-available", { params }),
+
+    getCapacityRange: (data: {
+      clinic_id: number;
+      start_date: string;
+      end_date: string;
+    }) =>
+      apiClient.post<{
+        data: Array<{
+          date: string;
+          total_capacity: number;
+          booked: number;
+          available: number;
+          utilization_percentage: number;
+        }>;
+      }>("/appointments/capacity-range", data),
+
+    // Recurring Appointments
+    createRecurring: (data: {
+      clinic_id: number;
+      branch_id?: number;
+      patient_id: number;
+      service_id: number;
+      staff_id?: number;
+      start_time: string;
+      recurring_pattern: "daily" | "weekly" | "monthly" | "yearly";
+      recurring_interval?: number;
+      recurring_days?: number[];
+      recurring_day_of_month?: number;
+      recurring_end_date?: string;
+      recurring_count?: number;
+      notes?: string;
+    }) =>
+      apiClient.post<{ data: any; message: string }>(
+        "/appointments/recurring",
+        data
+      ),
+
+    getRecurringSeries: (id: number) =>
+      apiClient.get<{
+        data: { parent: any; children: any[]; total_count: number };
+      }>(`/appointments/${id}/recurring-series`),
+
+    updateRecurringSeries: (id: number, data: any) =>
+      apiClient.put<{ data: any; message: string }>(
+        `/appointments/${id}/recurring-series`,
+        data
+      ),
+
+    deleteRecurringSeries: (id: number) =>
+      apiClient.delete<{ message: string }>(
+        `/appointments/${id}/recurring-series`
+      ),
+
+    // Cancellation Policy
+    checkCancellationPolicy: (id: number) =>
+      apiClient.get<{
+        data: {
+          allowed: boolean;
+          reason?: string;
+          is_late?: boolean;
+          fee?: number;
+        };
+      }>(`/appointments/${id}/cancellation-policy`),
+
+    getCancellationStats: (
+      clinicId: number,
+      startDate?: string,
+      endDate?: string
+    ) =>
+      apiClient.get<{ data: any }>("/appointments/cancellation-stats", {
+        params: {
+          clinic_id: clinicId,
+          start_date: startDate,
+          end_date: endDate,
+        },
+      }),
+
+    // Reminders
+    scheduleReminders: (
+      id: number,
+      settings: {
+        enabled: boolean;
+        timings: number[];
+        channel: "email" | "sms" | "both";
+      }
+    ) =>
+      apiClient.post<{ message: string }>(
+        `/appointments/${id}/reminders`,
+        settings
+      ),
+
+    getReminders: (id: number) =>
+      apiClient.get<{ data: any[] }>(`/appointments/${id}/reminders`),
   },
 
   // Services
@@ -310,7 +505,67 @@ export const api = {
 
   // Clinics
   clinics: {
+    getAll: () => apiClient.get<{ data: any[] }>("/clinics"),
+
     getById: (id: number) => apiClient.get<{ data: any }>(`/clinics/${id}`),
+
+    // Cancellation Policy
+    getCancellationPolicy: (clinicId: number) =>
+      apiClient.get<{ data: any }>(`/clinics/${clinicId}/cancellation-policy`),
+
+    updateCancellationPolicy: (
+      clinicId: number,
+      data: {
+        minimum_notice_hours: number;
+        late_cancellation_fee: number;
+        max_cancellations_per_month: number;
+        auto_block_after_cancellations?: number;
+        allow_patient_cancellation: boolean;
+        require_reason: boolean;
+        is_active: boolean;
+      }
+    ) =>
+      apiClient.put<{ data: any; message: string }>(
+        `/clinics/${clinicId}/cancellation-policy`,
+        data
+      ),
+
+    getCancellationReasons: (clinicId: number) =>
+      apiClient.get<{ data: any[] }>(
+        `/clinics/${clinicId}/cancellation-reasons`
+      ),
+
+    createCancellationReason: (
+      clinicId: number,
+      data: {
+        reason: string;
+        is_active?: boolean;
+        display_order?: number;
+      }
+    ) =>
+      apiClient.post<{ data: any; message: string }>(
+        `/clinics/${clinicId}/cancellation-reasons`,
+        data
+      ),
+
+    updateCancellationReason: (
+      clinicId: number,
+      reasonId: number,
+      data: {
+        reason?: string;
+        is_active?: boolean;
+        display_order?: number;
+      }
+    ) =>
+      apiClient.put<{ data: any; message: string }>(
+        `/clinics/${clinicId}/cancellation-reasons/${reasonId}`,
+        data
+      ),
+
+    deleteCancellationReason: (clinicId: number, reasonId: number) =>
+      apiClient.delete<{ message: string }>(
+        `/clinics/${clinicId}/cancellation-reasons/${reasonId}`
+      ),
   },
 
   // Reports/Dashboard
@@ -420,6 +675,9 @@ export const api = {
 
       getById: (id: number) =>
         apiClient.get<{ data: any }>(`/admin/staff/${id}`),
+
+      getWorkingHours: (staffId: number) =>
+        apiClient.get<{ data: any[] }>(`/admin/staff/${staffId}/working-hours`),
 
       create: (data: any) =>
         apiClient.post<{ data: any; message: string }>("/admin/staff", data),
@@ -663,6 +921,23 @@ export const api = {
 
       getTopDoctors: () =>
         apiClient.get<{ data: any[] }>("/admin/dashboard/top-doctors"),
+
+      getAppointmentsTrend: () =>
+        apiClient.get<{
+          success: boolean;
+          data: { labels: string[]; values: number[] };
+        }>("/admin/dashboard/appointments-trend"),
+
+      getRevenueTrend: () =>
+        apiClient.get<{
+          success: boolean;
+          data: { labels: string[]; values: number[] };
+        }>("/admin/dashboard/revenue-trend"),
+
+      getAppointmentsByStatus: () =>
+        apiClient.get<{ success: boolean; data: Record<string, number> }>(
+          "/admin/dashboard/appointments-by-status"
+        ),
     },
 
     subscriptionPlans: {
@@ -896,6 +1171,305 @@ export const api = {
           params: clinicId ? { clinic_id: clinicId } : {},
         }),
     },
+
+    bulkCancellation: {
+      preview: (data: {
+        staff_id: number;
+        start_date: string;
+        end_date: string;
+      }) =>
+        apiClient.post<{
+          success: boolean;
+          data: {
+            total_appointments: number;
+            appointments_by_date: Record<string, any[]>;
+            potentially_available_doctors: any[];
+            estimated_success_rate: number;
+          };
+        }>("/admin/bulk-cancellation/preview", data),
+
+      create: (data: {
+        clinic_id: number;
+        staff_id: number;
+        start_date: string;
+        end_date: string;
+        reason: "sick_leave" | "emergency" | "vacation" | "other";
+        reason_details?: string;
+      }) =>
+        apiClient.post<{
+          success: boolean;
+          message: string;
+          data: any;
+        }>("/admin/bulk-cancellation", data),
+
+      execute: (id: number) =>
+        apiClient.post<{
+          success: boolean;
+          message: string;
+          data: any;
+        }>(`/admin/bulk-cancellation/${id}/execute`),
+
+      getAll: (params?: {
+        clinic_id?: number;
+        status?: string;
+        staff_id?: number;
+        page?: number;
+      }) =>
+        apiClient.get<{
+          success: boolean;
+          data: PaginatedResponse<any>;
+        }>("/admin/bulk-cancellation", { params }),
+
+      getById: (id: number) =>
+        apiClient.get<{
+          success: boolean;
+          data: {
+            operation: any;
+            stats: any;
+          };
+        }>(`/admin/bulk-cancellation/${id}`),
+
+      cancel: (id: number) =>
+        apiClient.post<{
+          success: boolean;
+          message: string;
+          data: any;
+        }>(`/admin/bulk-cancellation/${id}/cancel`),
+
+      approveReassignment: (reassignmentId: number) =>
+        apiClient.post<{
+          success: boolean;
+          message: string;
+          data: any;
+        }>(`/admin/bulk-cancellation/reassignment/${reassignmentId}/approve`),
+
+      rejectReassignment: (reassignmentId: number, reason: string) =>
+        apiClient.post<{
+          success: boolean;
+          message: string;
+          data: any;
+        }>(`/admin/bulk-cancellation/reassignment/${reassignmentId}/reject`, {
+          reason,
+        }),
+    },
+
+    staffUnavailability: {
+      getAll: (params?: {
+        clinic_id?: number;
+        status?: "active" | "upcoming" | "past";
+      }) =>
+        apiClient.get<{
+          success: boolean;
+          data: Array<{
+            id: number;
+            staff_id: number;
+            staff_name: string;
+            clinic_id: number;
+            clinic_name: string;
+            start_date: string;
+            end_date: string;
+            reason: "sick_leave" | "vacation" | "emergency" | "other";
+            reason_label: string;
+            notes: string | null;
+            is_active: boolean;
+            is_upcoming: boolean;
+            days_count: number;
+            bulk_operation_id: number | null;
+            created_at: string;
+          }>;
+          count: number;
+        }>("/admin/staff-unavailability", { params }),
+
+      getById: (id: number) =>
+        apiClient.get<{
+          success: boolean;
+          data: {
+            id: number;
+            staff_id: number;
+            staff_name: string;
+            clinic_id: number;
+            clinic_name: string;
+            start_date: string;
+            end_date: string;
+            reason: string;
+            reason_label: string;
+            notes: string | null;
+            bulk_operation_id: number | null;
+            created_at: string;
+          };
+        }>(`/admin/staff-unavailability/${id}`),
+
+      delete: (id: number) =>
+        apiClient.delete<{
+          success: boolean;
+          message: string;
+        }>(`/admin/staff-unavailability/${id}`),
+
+      create: (data: {
+        staff_id: number;
+        start_date: string;
+        end_date: string;
+        reason: "sick_leave" | "vacation" | "emergency" | "other";
+        notes?: string;
+      }) =>
+        apiClient.post<{
+          success: boolean;
+          message: string;
+          data: {
+            id: number;
+            staff_id: number;
+            staff_name: string;
+            clinic_id: number;
+            clinic_name: string;
+            start_date: string;
+            end_date: string;
+            reason: string;
+            reason_label: string;
+            notes: string | null;
+          };
+        }>("/admin/staff-unavailability", data),
+    },
+  },
+
+  workingHours: {
+    getAll: () => apiClient.get<{ data: any[] }>("/working-hours"),
+
+    getByStaff: (staffId: number, clinicId: number) =>
+      apiClient.get<{ data: any[] }>("/working-hours", {
+        params: { staff_id: staffId, clinic_id: clinicId },
+      }),
+
+    create: (data: {
+      clinic_id: number;
+      staff_id: number;
+      day_of_week: string;
+      start_time: string;
+      end_time: string;
+      is_available: boolean;
+    }) =>
+      apiClient.post<{ data: any; message: string }>("/working-hours", data),
+
+    bulkCreate: (
+      staffId: number,
+      clinicId: number,
+      data: { working_hours: any[] }
+    ) =>
+      apiClient.post<{ data: any; message: string }>("/working-hours/bulk", {
+        staff_id: staffId,
+        clinic_id: clinicId,
+        ...data,
+      }),
+
+    update: (id: number, data: any) =>
+      apiClient.put<{ data: any; message: string }>(
+        `/working-hours/${id}`,
+        data
+      ),
+
+    delete: (id: number) =>
+      apiClient.delete<{ message: string }>(`/working-hours/${id}`),
+  },
+
+  notifications: {
+    // Get all notifications (paginated)
+    getAll: (params?: {
+      is_read?: boolean;
+      type?: string;
+      category?: string;
+      priority?: string;
+      per_page?: number;
+      page?: number;
+    }) =>
+      apiClient.get<{
+        success: boolean;
+        data: {
+          data: Array<{
+            id: number;
+            user_id: number;
+            clinic_id: number | null;
+            type: string;
+            title: string;
+            message: string;
+            data: any;
+            is_read: boolean;
+            read_at: string | null;
+            priority: "low" | "medium" | "high" | "urgent";
+            category: string;
+            action_url: string | null;
+            action_text: string | null;
+            created_at: string;
+            updated_at: string;
+            time_ago: string;
+          }>;
+          current_page: number;
+          last_page: number;
+          per_page: number;
+          total: number;
+        };
+      }>("/notifications", { params }),
+
+    // Get recent notifications (limit 10)
+    getRecent: () =>
+      apiClient.get<{
+        success: boolean;
+        data: Array<{
+          id: number;
+          type: string;
+          title: string;
+          message: string;
+          is_read: boolean;
+          priority: string;
+          category: string;
+          action_url: string | null;
+          action_text: string | null;
+          created_at: string;
+          time_ago: string;
+        }>;
+      }>("/notifications/recent"),
+
+    // Get unread count
+    getUnreadCount: () =>
+      apiClient.get<{ success: boolean; count: number }>(
+        "/notifications/unread-count"
+      ),
+
+    // Mark as read
+    markAsRead: (id: number) =>
+      apiClient.post<{
+        success: boolean;
+        message: string;
+        data: any;
+      }>(`/notifications/${id}/mark-as-read`),
+
+    // Mark as unread
+    markAsUnread: (id: number) =>
+      apiClient.post<{
+        success: boolean;
+        message: string;
+        data: any;
+      }>(`/notifications/${id}/mark-as-unread`),
+
+    // Mark all as read
+    markAllAsRead: () =>
+      apiClient.post<{
+        success: boolean;
+        message: string;
+        count: number;
+      }>("/notifications/mark-all-as-read"),
+
+    // Delete notification
+    delete: (id: number) =>
+      apiClient.delete<{ success: boolean; message: string }>(
+        `/notifications/${id}`
+      ),
+
+    // Delete all read notifications
+    deleteAllRead: () =>
+      apiClient.delete<{
+        success: boolean;
+        message: string;
+        count: number;
+      }>("/notifications/read/all"),
   },
 };
 

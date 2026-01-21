@@ -25,6 +25,9 @@ class ClinicStaff extends Model
         'invitation_token',
         'invitation_sent_at',
         'invitation_accepted_at',
+        'max_daily_appointments',
+        'appointment_duration_minutes',
+        'allow_online_booking',
     ];
 
     protected $casts = [
@@ -32,6 +35,9 @@ class ClinicStaff extends Model
         'is_active' => 'boolean',
         'invitation_sent_at' => 'datetime',
         'invitation_accepted_at' => 'datetime',
+        'allow_online_booking' => 'boolean',
+        'max_daily_appointments' => 'integer',
+        'appointment_duration_minutes' => 'integer',
     ];
 
     /**

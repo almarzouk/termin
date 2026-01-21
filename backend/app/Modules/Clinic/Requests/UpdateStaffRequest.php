@@ -27,6 +27,7 @@ class UpdateStaffRequest extends FormRequest
             'bio' => 'nullable|string|max:1000',
             'hire_date' => 'nullable|date',
             'is_active' => 'sometimes|boolean',
+            'annual_leave_balance' => 'nullable|integer|min:0|max:365',
         ];
     }
 

@@ -18,6 +18,13 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
+import SubscriptionLimitsCard from "@/components/subscription/SubscriptionLimitsCard";
+import { StaffUnavailabilityAlerts } from "@/components/admin/staff-unavailability-alerts";
+import {
+  AppointmentsTrendChart,
+  RevenueTrendChart,
+  AppointmentsByStatusChart,
+} from "@/components/admin/dashboard-charts";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>({
@@ -32,7 +39,17 @@ export default function AdminDashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [topDoctors, setTopDoctors] = useState<any[]>([]);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [appointmentsTrend, setAppointmentsTrend] = useState<{
+    labels: string[];
+    values: number[];
+  }>({ labels: [], values: [] });
+  const [revenueTrend, setRevenueTrend] = useState<{
+    labels: string[];
+    values: number[];
+  }>({ labels: [], values: [] });
+  const [appointmentsByStatus, setAppointmentsByStatus] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     fetchDashboardData();
@@ -41,14 +58,45 @@ export default function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, doctorsRes] = await Promise.all([
-        api.admin.dashboard.getStats(),
-        api.admin.dashboard.getTopDoctors(),
-      ]);
+      const [statsRes, doctorsRes, trendRes, revenueRes, statusRes] =
+        await Promise.all([
+          api.admin.dashboard.getStats(),
+          api.admin.dashboard.getTopDoctors(),
+          api.admin.dashboard.getAppointmentsTrend(),
+          api.admin.dashboard.getRevenueTrend(),
+          api.admin.dashboard.getAppointmentsByStatus(),
+        ]);
+
+      console.log("📊 Dashboard API Responses:");
+      console.log("Stats:", statsRes);
+      console.log("Top Doctors:", doctorsRes);
+      console.log("Appointments Trend:", trendRes);
+      console.log("Revenue Trend:", revenueRes);
+      console.log("Appointments by Status:", statusRes);
 
       setStats(statsRes.data.data || {});
       setTopDoctors(doctorsRes.data.data || []);
+
+      // For chart endpoints, data is directly in response.data (not response.data.data)
+      const appointmentsTrendData = trendRes.data || {
+        labels: [],
+        values: [],
+      };
+      console.log("Setting Appointments Trend:", appointmentsTrendData);
+      setAppointmentsTrend(appointmentsTrendData);
+
+      const revenueTrendData = revenueRes.data || {
+        labels: [],
+        values: [],
+      };
+      console.log("Setting Revenue Trend:", revenueTrendData);
+      setRevenueTrend(revenueTrendData);
+
+      const statusData = statusRes.data || {};
+      console.log("Setting Status Data:", statusData);
+      setAppointmentsByStatus(statusData);
     } catch (error: any) {
+      console.error("❌ Dashboard Error:", error);
       toast({
         title: "❌ Fehler",
         description: "Dashboard-Daten konnten nicht geladen werden",
@@ -184,10 +232,36 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          {/* Top Doctors & Recent Activities */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Appointments Trend Chart */}
+            <div className="lg:col-span-2">
+              <AppointmentsTrendChart data={appointmentsTrend} />
+            </div>
+
+            {/* Appointments By Status Pie Chart */}
+            <div className="lg:col-span-1">
+              <AppointmentsByStatusChart data={appointmentsByStatus} />
+            </div>
+          </div>
+
+          {/* Revenue Trend Chart */}
+          <div className="grid grid-cols-1 gap-6">
+            <RevenueTrendChart data={revenueTrend} />
+          </div>
+
+          {/* Staff Unavailability Alerts */}
+          <StaffUnavailabilityAlerts maxItems={5} />
+
+          {/* Subscription Limits + Top Doctors & Recent Activities */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Subscription Limits Card */}
+            <div className="lg:col-span-1">
+              <SubscriptionLimitsCard />
+            </div>
+
             {/* Top Doctors */}
-            <Card className="p-6">
+            <Card className="p-6 lg:col-span-2">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Stethoscope className="h-5 w-5 text-blue-600" />
                 Top Ärzte
@@ -229,59 +303,57 @@ export default function AdminDashboardPage() {
                 )}
               </div>
             </Card>
-
-            {/* System Status */}
-            <Card className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Activity className="h-5 w-5 text-green-600" />
-                Systemstatus
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="font-medium text-gray-900">Datenbank</span>
-                  </div>
-                  <span className="text-sm font-semibold text-green-600">
-                    Aktiv
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="font-medium text-gray-900">
-                      API Server
-                    </span>
-                  </div>
-                  <span className="text-sm font-semibold text-green-600">
-                    Aktiv
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="font-medium text-gray-900">
-                      E-Mail Service
-                    </span>
-                  </div>
-                  <span className="text-sm font-semibold text-green-600">
-                    Aktiv
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-600" />
-                    <span className="font-medium text-gray-900">
-                      Backup Service
-                    </span>
-                  </div>
-                  <span className="text-sm font-semibold text-yellow-600">
-                    Ausstehend
-                  </span>
-                </div>
-              </div>
-            </Card>
           </div>
+
+          {/* System Status */}
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-green-600" />
+              Systemstatus
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-gray-900">Datenbank</span>
+                </div>
+                <span className="text-sm font-semibold text-green-600">
+                  Aktiv
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-gray-900">API Server</span>
+                </div>
+                <span className="text-sm font-semibold text-green-600">
+                  Aktiv
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-gray-900">
+                    E-Mail Service
+                  </span>
+                </div>
+                <span className="text-sm font-semibold text-green-600">
+                  Aktiv
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                  <span className="font-medium text-gray-900">
+                    Backup Service
+                  </span>
+                </div>
+                <span className="text-sm font-semibold text-yellow-600">
+                  Ausstehend
+                </span>
+              </div>
+            </div>
+          </Card>
 
           {/* Quick Actions */}
           <Card className="p-6">

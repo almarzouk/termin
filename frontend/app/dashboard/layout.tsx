@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/dashboard/sidebar";
 import { Button } from "@/components/ui/button";
-import { Bell, Mail, Settings, Search, Sun, Moon, Menu } from "lucide-react";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
+import { Mail, Settings, Search, Sun, Moon, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -133,14 +134,7 @@ export default function DashboardLayout({
               </Button>
 
               {/* Notifications */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative hidden sm:flex"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </Button>
+              <NotificationBell />
 
               {/* Messages */}
               <Button

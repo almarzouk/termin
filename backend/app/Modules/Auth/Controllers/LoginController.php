@@ -36,6 +36,13 @@ class LoginController extends Controller
         // Create API token
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        // Get patient_id if user has patient role
+        $patientId = null;
+        $patient = \App\Modules\Patient\Models\Patient::where('user_id', $user->id)->first();
+        if ($patient) {
+            $patientId = $patient->id;
+        }
+
         return response()->json([
             'message' => 'Erfolgreich angemeldet.',
             'user' => [
@@ -45,6 +52,7 @@ class LoginController extends Controller
                 'phone' => $user->phone,
                 'avatar' => $user->avatar,
                 'clinic_id' => $user->clinic_id,
+                'patient_id' => $patientId,
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ],

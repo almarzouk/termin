@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import api from "@/lib/api";
+import { AuthGuard } from "@/lib/auth-guard";
 
 export default function SchedulePage() {
   const [schedules, setSchedules] = useState<any[]>([]);
@@ -186,122 +187,141 @@ export default function SchedulePage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-            Terminplan
-          </h1>
-          <p className="text-gray-600 mt-1">Verwalten Sie alle Arzttermine</p>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="icon" onClick={handlePreviousDay}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
-            <Calendar className="h-5 w-5 text-blue-600" />
-            <span className="font-medium text-gray-900">
-              {formatDate(selectedDate)}
-            </span>
+    <AuthGuard
+      requiredRoles={[
+        "doctor",
+        "nurse",
+        "receptionist",
+        "pharmacist",
+        "lab_technician",
+        "clinic_owner",
+        "clinic_manager",
+        "super_admin",
+      ]}
+    >
+      <div className="p-4 lg:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+              Terminplan
+            </h1>
+            <p className="text-gray-600 mt-1">Verwalten Sie alle Arzttermine</p>
           </div>
-          <Button variant="outline" size="icon" onClick={handleNextDay}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
 
-      {/* Error Alert */}
-      {error && (
-        <Card className="p-4 bg-orange-50 border-orange-200">
-          <div className="flex items-center space-x-2 text-orange-700">
-            <AlertCircle className="h-5 w-5" />
-            <p>{error}</p>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" size="icon" onClick={handlePreviousDay}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-gray-900">
+                {formatDate(selectedDate)}
+              </span>
+            </div>
+            <Button variant="outline" size="icon" onClick={handleNextDay}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
           </div>
-        </Card>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-gray-600">Gesamt Termine</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-gray-600">Bestätigt</p>
-          <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-gray-600">Ausstehend</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-gray-600">Verfügbar</p>
-          <p className="text-2xl font-bold text-gray-600">{stats.available}</p>
-        </Card>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
-      ) : (
-        <>
-          {/* Schedule Grid */}
-          <div className="space-y-6">
-            {schedules.map((schedule) => (
-              <Card key={schedule.id} className="p-6">
-                <div className="flex items-center space-x-4 mb-6 pb-4 border-b">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={schedule.image} />
-                    <AvatarFallback>{schedule.doctor[4]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {schedule.doctor}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {schedule.specialty}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {schedule.timeSlots.map((slot: any, index: number) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        slot.status === "confirmed"
-                          ? "border-green-200 bg-green-50"
-                          : slot.status === "pending"
-                          ? "border-orange-200 bg-orange-50"
-                          : "border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 cursor-pointer"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-gray-600" />
-                          <span className="font-medium text-gray-900">
-                            {slot.time}
-                          </span>
-                        </div>
-                        {getStatusBadge(slot.status)}
-                      </div>
-                      {slot.patient ? (
-                        <p className="text-sm text-gray-700 font-medium">
-                          {slot.patient}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-500">Keine Buchung</p>
-                      )}
+        {/* Error Alert */}
+        {error && (
+          <Card className="p-4 bg-orange-50 border-orange-200">
+            <div className="flex items-center space-x-2 text-orange-700">
+              <AlertCircle className="h-5 w-5" />
+              <p>{error}</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <p className="text-sm text-gray-600">Gesamt Termine</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-gray-600">Bestätigt</p>
+            <p className="text-2xl font-bold text-green-600">
+              {stats.confirmed}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-gray-600">Ausstehend</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {stats.pending}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-gray-600">Verfügbar</p>
+            <p className="text-2xl font-bold text-gray-600">
+              {stats.available}
+            </p>
+          </Card>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        ) : (
+          <>
+            {/* Schedule Grid */}
+            <div className="space-y-6">
+              {schedules.map((schedule) => (
+                <Card key={schedule.id} className="p-6">
+                  <div className="flex items-center space-x-4 mb-6 pb-4 border-b">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={schedule.image} />
+                      <AvatarFallback>{schedule.doctor[4]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {schedule.doctor}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {schedule.specialty}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {schedule.timeSlots.map((slot: any, index: number) => (
+                      <div
+                        key={index}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          slot.status === "confirmed"
+                            ? "border-green-200 bg-green-50"
+                            : slot.status === "pending"
+                            ? "border-orange-200 bg-orange-50"
+                            : "border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 cursor-pointer"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="h-4 w-4 text-gray-600" />
+                            <span className="font-medium text-gray-900">
+                              {slot.time}
+                            </span>
+                          </div>
+                          {getStatusBadge(slot.status)}
+                        </div>
+                        {slot.patient ? (
+                          <p className="text-sm text-gray-700 font-medium">
+                            {slot.patient}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500">Keine Buchung</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </AuthGuard>
   );
 }

@@ -22,7 +22,7 @@ export default function MaintenanceCheck() {
     const checkMaintenanceMode = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/admin/maintenance/status`,
+          `${process.env.NEXT_PUBLIC_API_URL}/maintenance/status`,
           {
             cache: "no-store",
           }

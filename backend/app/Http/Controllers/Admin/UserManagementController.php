@@ -84,6 +84,43 @@ class UserManagementController extends Controller
             ], 422);
         }
 
+        // Check subscription limits for specific roles
+        if ($validated['role'] === 'doctor') {
+            $limitService = new \App\Services\SubscriptionLimitService();
+
+            // Get the clinic owner
+            $clinic = \App\Models\Clinic::find($validated['clinic_id']);
+            if ($clinic && $clinic->user) {
+                $limitCheck = $limitService->canCreateDoctor($clinic->user);
+
+                if (!$limitCheck['allowed']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $limitCheck['message'],
+                        'current' => $limitCheck['current'],
+                        'limit' => $limitCheck['limit'],
+                    ], 403);
+                }
+            }
+        } elseif (in_array($validated['role'], ['receptionist', 'nurse', 'pharmacist', 'lab_technician'])) {
+            $limitService = new \App\Services\SubscriptionLimitService();
+
+            // Get the clinic owner
+            $clinic = \App\Models\Clinic::find($validated['clinic_id']);
+            if ($clinic && $clinic->user) {
+                $limitCheck = $limitService->canCreateStaff($clinic->user);
+
+                if (!$limitCheck['allowed']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $limitCheck['message'],
+                        'current' => $limitCheck['current'],
+                        'limit' => $limitCheck['limit'],
+                    ], 403);
+                }
+            }
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],

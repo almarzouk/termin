@@ -15,29 +15,49 @@ class StaffController extends Controller
      */
     public function index(Request $request)
     {
-        // Staff roles
-        $staffRoles = ['receptionist', 'nurse', 'pharmacist', 'lab_technician', 'clinic_manager', 'administrator'];
+        $user = $request->user();
 
-        $query = User::with(['roles', 'clinic'])
-            ->whereHas('roles', function ($q) use ($staffRoles) {
-                $q->whereIn('name', $staffRoles);
-            });
+        // Use ClinicStaff model instead of User
+        $query = \App\Models\ClinicStaff::with(['user', 'clinic']);
+
+        // Filter by clinic for clinic_owner
+        if (!$user->hasRole('super_admin')) {
+            $clinicIds = $user->clinicsOwned()->pluck('id');
+
+            \Log::info('StaffController - Filtering for clinic_owner:', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'clinic_ids' => $clinicIds->toArray(),
+            ]);
+
+            if ($clinicIds->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'data' => [],
+                        'current_page' => 1,
+                        'total' => 0,
+                    ],
+                ]);
+            }
+            $query->whereIn('clinic_id', $clinicIds);
+        }
 
         // Search
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
+                $q->whereHas('user', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhere('specialty', 'like', "%{$search}%");
             });
         }
 
         // Filter by role
         if ($request->has('role')) {
-            $query->whereHas('roles', function ($q) use ($request) {
-                $q->where('name', $request->role);
-            });
+            $query->where('role', $request->role);
         }
 
         // Filter by clinic_id (if provided)
@@ -46,6 +66,11 @@ class StaffController extends Controller
         }
 
         $staff = $query->paginate($request->per_page ?? 15);
+
+        \Log::info('StaffController - Staff returned:', [
+            'total' => $staff->total(),
+            'count' => $staff->count(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -115,6 +140,45 @@ class StaffController extends Controller
      */
     public function update(Request $request, $id)
     {
+        \Log::info('StaffController@update called', [
+            'id' => $id,
+            'request_data' => $request->all(),
+        ]);
+
+        // Try to find in ClinicStaff table first
+        $staff = \App\Models\ClinicStaff::find($id);
+
+        if ($staff) {
+            \Log::info('Found ClinicStaff record', ['staff_id' => $staff->id]);
+
+            // Update ClinicStaff record
+            $validated = $request->validate([
+                'role' => 'sometimes|string|in:doctor,nurse,receptionist,clinic_manager',
+                'specialty' => 'nullable|string|max:255',
+                'license_number' => 'nullable|string|max:100',
+                'bio' => 'nullable|string',
+                'annual_leave_balance' => 'nullable|integer|min:0|max:365',
+                'is_active' => 'sometimes|boolean',
+            ]);
+
+            \Log::info('Validated data', ['validated' => $validated]);
+
+            $staff->update($validated);
+
+            \Log::info('Updated ClinicStaff', [
+                'new_balance' => $staff->fresh()->annual_leave_balance
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Mitarbeiter erfolgreich aktualisiert.',
+                'data' => $staff->fresh()->load(['user', 'clinic']),
+            ]);
+        }
+
+        \Log::info('ClinicStaff not found, trying User table');
+
+        // Fallback to User table
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
@@ -180,6 +244,19 @@ class StaffController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Mitarbeiter erfolgreich gelöscht.',
+        ]);
+    }
+
+    /**
+     * Get working hours for a staff member
+     */
+    public function getWorkingHours($id)
+    {
+        $workingHours = \App\Models\StaffWorkingHours::where('staff_id', $id)->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $workingHours,
         ]);
     }
 

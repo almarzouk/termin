@@ -15,6 +15,13 @@ class UserController extends Controller
     {
         $user = $request->user();
 
+        // Get patient_id if user has patient record
+        $patientId = null;
+        $patient = \App\Modules\Patient\Models\Patient::where('user_id', $user->id)->first();
+        if ($patient) {
+            $patientId = $patient->id;
+        }
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -30,6 +37,7 @@ class UserController extends Controller
                 'postal_code' => $user->postal_code,
                 'language' => $user->language,
                 'clinic_id' => $user->clinic_id,
+                'patient_id' => $patientId,
                 'is_active' => $user->is_active,
                 'email_verified_at' => $user->email_verified_at,
                 'roles' => $user->getRoleNames(),

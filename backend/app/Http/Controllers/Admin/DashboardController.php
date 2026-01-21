@@ -212,4 +212,111 @@ class DashboardController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get appointments trend for the last 7 days
+     */
+    public function appointmentsTrend()
+    {
+        try {
+            $days = [];
+            $data = [];
+
+            for ($i = 6; $i >= 0; $i--) {
+                $date = Carbon::now()->subDays($i);
+                $dayName = $date->locale('de')->isoFormat('dd');
+                $count = Appointment::whereDate('start_time', $date)->count();
+
+                $days[] = $dayName;
+                $data[] = $count;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'labels' => $days,
+                    'values' => $data,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Appointments trend error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler beim Laden des Trends',
+                'data' => ['labels' => [], 'values' => []],
+            ], 500);
+        }
+    }
+
+    /**
+     * Get revenue trend for the last 7 days
+     */
+    public function revenueTrend()
+    {
+        try {
+            if (!DB::getSchemaBuilder()->hasTable('payments')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['labels' => [], 'values' => []],
+                ]);
+            }
+
+            $days = [];
+            $data = [];
+
+            for ($i = 6; $i >= 0; $i--) {
+                $date = Carbon::now()->subDays($i);
+                $dayName = $date->locale('de')->isoFormat('dd');
+                $revenue = DB::table('payments')
+                    ->whereDate('created_at', $date)
+                    ->where('status', 'completed')
+                    ->sum('amount');
+
+                $days[] = $dayName;
+                $data[] = (float) $revenue;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'labels' => $days,
+                    'values' => $data,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Revenue trend error: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'data' => ['labels' => [], 'values' => []],
+            ]);
+        }
+    }
+
+    /**
+     * Get appointments by status distribution
+     */
+    public function appointmentsByStatus()
+    {
+        try {
+            $statuses = [
+                'pending' => Appointment::where('status', 'pending')->count(),
+                'confirmed' => Appointment::where('status', 'confirmed')->count(),
+                'completed' => Appointment::where('status', 'completed')->count(),
+                'cancelled' => Appointment::where('status', 'cancelled')->count(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $statuses,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Appointments by status error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler',
+                'data' => [],
+            ], 500);
+        }
+    }
 }
+

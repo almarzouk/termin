@@ -8,6 +8,7 @@ use App\Modules\Clinic\Requests\UpdateStaffRequest;
 use App\Models\Clinic;
 use App\Models\ClinicStaff;
 use App\Models\User;
+use App\Services\SubscriptionLimitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -71,6 +72,19 @@ class StaffController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Sie sind nicht berechtigt, Mitarbeiter für diese Klinik einzuladen.',
+            ], 403);
+        }
+
+        // Check subscription limits
+        $limitService = new SubscriptionLimitService();
+        $limitCheck = $limitService->canCreateStaff(auth()->user());
+
+        if (!$limitCheck['allowed']) {
+            return response()->json([
+                'success' => false,
+                'message' => $limitCheck['message'],
+                'current' => $limitCheck['current'],
+                'limit' => $limitCheck['limit'],
             ], 403);
         }
 

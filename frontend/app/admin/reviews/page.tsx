@@ -392,11 +392,12 @@ export default function ReviewsManagementPage() {
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                       <span className="flex items-center gap-1">
-                        👤 {review.patient.first_name} {review.patient.last_name}
+                        👤 {review.patient?.first_name || "N/A"}{" "}
+                        {review.patient?.last_name || ""}
                       </span>
                       {userRole === "super_admin" && (
                         <span className="flex items-center gap-1">
-                          🏥 {review.clinic.name}
+                          🏥 {review.clinic?.name || "N/A"}
                         </span>
                       )}
                       {review.appointment?.staff && (

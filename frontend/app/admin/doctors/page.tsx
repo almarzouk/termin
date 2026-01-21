@@ -21,6 +21,8 @@ import api from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StaffUnavailabilityAlerts } from "@/components/admin/staff-unavailability-alerts";
+import { DoctorAvailabilityCalendar } from "@/components/admin/doctor-availability-calendar";
 
 export default function DoctorsManagementPage() {
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -137,6 +139,13 @@ export default function DoctorsManagementPage() {
           </Button>
         </Link>
       </div>
+
+      {/* Staff Unavailability Alerts */}
+      <StaffUnavailabilityAlerts
+        clinicId={userClinicId || undefined}
+        maxItems={3}
+        onUpdate={fetchDoctors}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -311,6 +320,18 @@ export default function DoctorsManagementPage() {
           )}
         </div>
       </Card>
+
+      {/* Doctor Availability Calendar */}
+      {doctors.length > 0 && (
+        <DoctorAvailabilityCalendar
+          doctors={doctors.map((d) => ({
+            id: d.id,
+            user: { name: d.name },
+            clinic_id: d.clinic_id || userClinicId || 0,
+          }))}
+          clinicId={userClinicId || undefined}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

@@ -26,6 +26,7 @@ use App\Modules\Analytics\Controllers\PatientAnalyticsController;
 use App\Modules\Analytics\Controllers\StaffPerformanceController;
 use App\Modules\Doctor\Controllers\DoctorController;
 use App\Modules\Review\Controllers\ReviewController;
+use App\Modules\CancellationPolicy\Controllers\CancellationPolicyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +43,9 @@ Route::prefix('auth')->group(function () {
 // Public Subscription Plans (for homepage pricing)
 Route::get('/subscription-plans', [App\Http\Controllers\Admin\SubscriptionPlanController::class, 'index']);
 
+// Public Maintenance Status (accessible without auth)
+Route::get('/maintenance/status', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'status']);
+
 // Public Clinic Routes (for patient browsing)
 Route::prefix('public')->group(function () {
     Route::get('/clinics', [ClinicController::class, 'index']); // Browse all clinics
@@ -57,6 +61,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::post('/avatar', [ProfileController::class, 'uploadAvatar']);
         Route::put('/password', [PasswordController::class, 'change']);
+    });
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::get('/recent', [App\Http\Controllers\Api\NotificationController::class, 'recent']);
+        Route::get('/unread-count', [App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+        Route::post('/{id}/mark-as-read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+        Route::post('/{id}/mark-as-unread', [App\Http\Controllers\Api\NotificationController::class, 'markAsUnread']);
+        Route::post('/mark-all-as-read', [App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+        Route::delete('/read/all', [App\Http\Controllers\Api\NotificationController::class, 'deleteAllRead']);
     });
 
     // Clinic Management
@@ -92,6 +108,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{clinic}/staff/{staff}', [StaffController::class, 'update']);
         Route::delete('/{clinic}/staff/{staff}', [StaffController::class, 'destroy']);
         Route::post('/{clinic}/staff/{staff}/resend-invitation', [StaffController::class, 'resendInvitation']);
+
+        // Cancellation Policy
+        Route::get('/{clinic}/cancellation-policy', [CancellationPolicyController::class, 'show']);
+        Route::put('/{clinic}/cancellation-policy', [CancellationPolicyController::class, 'update']);
+        Route::get('/{clinic}/cancellation-reasons', [CancellationPolicyController::class, 'getReasons']);
+        Route::post('/{clinic}/cancellation-reasons', [CancellationPolicyController::class, 'createReason']);
+        Route::put('/{clinic}/cancellation-reasons/{reason}', [CancellationPolicyController::class, 'updateReason']);
+        Route::delete('/{clinic}/cancellation-reasons/{reason}', [CancellationPolicyController::class, 'deleteReason']);
     });
 
     // Patient Management
@@ -113,6 +137,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{doctor}', [DoctorController::class, 'update']);
         Route::delete('/{doctor}', [DoctorController::class, 'destroy']);
         Route::get('/{doctor}/schedule', [DoctorController::class, 'schedule']);
+
+        // Doctor Appointment Settings
+        Route::get('/{doctor}/appointment-settings', [\App\Http\Controllers\Admin\DoctorAppointmentSettingsController::class, 'show']);
+        Route::put('/{doctor}/appointment-settings', [\App\Http\Controllers\Admin\DoctorAppointmentSettingsController::class, 'update']);
+        Route::get('/{doctor}/daily-stats', [\App\Http\Controllers\Admin\DoctorAppointmentSettingsController::class, 'dailyStats']);
+        Route::get('/{doctor}/weekly-stats', [\App\Http\Controllers\Admin\DoctorAppointmentSettingsController::class, 'weeklyStats']);
     });
 
     // Appointment Management
@@ -120,11 +150,30 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [AppointmentController::class, 'index']);
         Route::post('/check-availability', [AppointmentController::class, 'checkAvailability']);
         Route::post('/', [AppointmentController::class, 'store']);
+
+        // Appointment Availability & Distribution (MUST be before /{appointment} routes)
+        Route::get('/available-slots', [\App\Http\Controllers\Api\AppointmentAvailabilityController::class, 'getAvailableSlots']);
+        Route::get('/clinic-capacity', [\App\Http\Controllers\Api\AppointmentAvailabilityController::class, 'getClinicCapacity']);
+        Route::post('/find-best-doctor', [\App\Http\Controllers\Api\AppointmentAvailabilityController::class, 'findBestDoctor']);
+        Route::get('/next-available', [\App\Http\Controllers\Api\AppointmentAvailabilityController::class, 'getNextAvailable']);
+        Route::post('/capacity-range', [\App\Http\Controllers\Api\AppointmentAvailabilityController::class, 'getCapacityRange']);
+
+        // Recurring Appointments (before /{appointment})
+        Route::post('/recurring', [AppointmentController::class, 'createRecurring']);
+        Route::get('/cancellation-stats', [AppointmentController::class, 'getCancellationStats']);
+
+        // Dynamic routes with parameters (MUST be last)
         Route::get('/{appointment}', [AppointmentController::class, 'show']);
         Route::put('/{appointment}', [AppointmentController::class, 'update']);
         Route::post('/{appointment}/cancel', [AppointmentController::class, 'cancel']);
         Route::post('/{appointment}/confirm', [AppointmentController::class, 'confirm']);
         Route::post('/{appointment}/complete', [AppointmentController::class, 'complete']);
+        Route::get('/{appointment}/recurring-series', [AppointmentController::class, 'getRecurringSeries']);
+        Route::put('/{appointment}/recurring-series', [AppointmentController::class, 'updateRecurringSeries']);
+        Route::delete('/{appointment}/recurring-series', [AppointmentController::class, 'deleteRecurringSeries']);
+        Route::get('/{appointment}/cancellation-policy', [AppointmentController::class, 'checkCancellationPolicy']);
+        Route::post('/{appointment}/reminders', [AppointmentController::class, 'scheduleReminders']);
+        Route::get('/{appointment}/reminders', [AppointmentController::class, 'getReminders']);
     });
 
     // Working Hours Management
@@ -223,6 +272,9 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/dashboard/stats', [App\Http\Controllers\Admin\DashboardController::class, 'stats']);
     Route::get('/dashboard/appointments-chart', [App\Http\Controllers\Admin\DashboardController::class, 'appointmentsChart']);
     Route::get('/dashboard/top-doctors', [App\Http\Controllers\Admin\DashboardController::class, 'topDoctors']);
+    Route::get('/dashboard/appointments-trend', [App\Http\Controllers\Admin\DashboardController::class, 'appointmentsTrend']);
+    Route::get('/dashboard/revenue-trend', [App\Http\Controllers\Admin\DashboardController::class, 'revenueTrend']);
+    Route::get('/dashboard/appointments-by-status', [App\Http\Controllers\Admin\DashboardController::class, 'appointmentsByStatus']);
 
     // Maintenance Mode
     Route::prefix('maintenance')->group(function () {
@@ -281,6 +333,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\StaffController::class, 'index']);
         Route::post('/', [App\Http\Controllers\Admin\StaffController::class, 'store']);
         Route::get('/{id}', [App\Http\Controllers\Admin\StaffController::class, 'show']);
+        Route::get('/{id}/working-hours', [App\Http\Controllers\Admin\StaffController::class, 'getWorkingHours']);
         Route::put('/{id}', [App\Http\Controllers\Admin\StaffController::class, 'update']);
         Route::delete('/{id}', [App\Http\Controllers\Admin\StaffController::class, 'destroy']);
         Route::post('/{id}/toggle-status', [App\Http\Controllers\Admin\StaffController::class, 'toggleStatus']);
@@ -377,6 +430,20 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         Route::post('/{id}/renew', [App\Http\Controllers\Admin\SubscriptionController::class, 'renew']);
     });
 
+    // Appointments Management (Admin)
+    Route::prefix('appointments')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'index']);
+        Route::get('/stats', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'stats']);
+        Route::get('/{id}', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'show']);
+        Route::post('/', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'store']);
+        Route::put('/{id}', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'destroy']);
+        Route::post('/{id}/status', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'updateStatus']);
+        Route::post('/{id}/confirm', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'confirm']);
+        Route::post('/{id}/cancel', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'cancel']);
+        Route::post('/{id}/complete', [App\Http\Controllers\Admin\AppointmentManagementController::class, 'complete']);
+    });
+
     // Reviews Management
     Route::prefix('reviews')->group(function () {
         Route::get('/', [ReviewController::class, 'index']);
@@ -386,5 +453,43 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         Route::post('/{id}/reject', [ReviewController::class, 'reject']);
         Route::delete('/{id}', [ReviewController::class, 'destroy']);
     });
+
+    // Bulk Cancellation & Reassignment (Doctor Emergency Management)
+    Route::prefix('bulk-cancellation')->group(function () {
+        Route::post('/preview', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'preview']);
+        Route::post('/', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'create']);
+        Route::get('/', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'index']);
+        Route::get('/{id}', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'show']);
+        Route::post('/{id}/execute', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'execute']);
+        Route::post('/{id}/cancel', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'cancel']);
+
+        // Patient reassignment approval/rejection
+        Route::post('/reassignment/{id}/approve', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'approveReassignment']);
+        Route::post('/reassignment/{id}/reject', [App\Http\Controllers\Api\Admin\DoctorBulkCancellationController::class, 'rejectReassignment']);
+    });
+
+    // Staff Unavailability Periods Management
+    Route::prefix('staff-unavailability')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\Admin\StaffUnavailabilityController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Api\Admin\StaffUnavailabilityController::class, 'store']);
+        Route::get('/{id}', [App\Http\Controllers\Api\Admin\StaffUnavailabilityController::class, 'show']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\Admin\StaffUnavailabilityController::class, 'destroy']);
+    });
+});
+
+// Subscription Routes (Protected)
+Route::prefix('subscriptions')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/my-subscription', [App\Modules\Subscription\Controllers\SubscriptionController::class, 'mySubscription']);
+    Route::get('/invoices', [App\Modules\Subscription\Controllers\SubscriptionController::class, 'getInvoices']);
+    Route::get('/invoices/{id}/download', [App\Modules\Subscription\Controllers\SubscriptionController::class, 'downloadInvoice']);
+    Route::post('/upgrade', [App\Modules\Subscription\Controllers\SubscriptionController::class, 'upgrade']);
+    Route::post('/cancel', [App\Modules\Subscription\Controllers\SubscriptionController::class, 'cancel']);
+
+    // Subscription Limits
+    Route::get('/limits', [App\Http\Controllers\Api\SubscriptionLimitController::class, 'index']);
+    Route::get('/limits/clinics', [App\Http\Controllers\Api\SubscriptionLimitController::class, 'checkClinicLimit']);
+    Route::get('/limits/doctors', [App\Http\Controllers\Api\SubscriptionLimitController::class, 'checkDoctorLimit']);
+    Route::get('/limits/staff', [App\Http\Controllers\Api\SubscriptionLimitController::class, 'checkStaffLimit']);
+    Route::get('/limits/appointments', [App\Http\Controllers\Api\SubscriptionLimitController::class, 'checkAppointmentLimit']);
 });
 

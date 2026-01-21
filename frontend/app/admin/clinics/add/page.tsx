@@ -6,15 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSubscriptionLimits } from "@/hooks/useSubscriptionLimits";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AddClinicPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
+  const { canCreateClinic, getLimitMessage, limits } = useSubscriptionLimits();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -30,6 +44,13 @@ export default function AddClinicPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check subscription limit first
+    if (!canCreateClinic()) {
+      setLimitMessage(getLimitMessage("clinics"));
+      setShowLimitDialog(true);
+      return;
+    }
 
     // Validation
     if (!formData.name || !formData.email || !formData.phone) {
@@ -75,13 +96,22 @@ export default function AddClinicPage() {
       });
       router.push("/admin/clinics");
     } catch (error: any) {
-      toast({
-        title: "❌ Fehler",
-        description:
-          error.response?.data?.message ||
-          "Klinik konnte nicht erstellt werden",
-        variant: "destructive",
-      });
+      // Check if it's a subscription limit error
+      if (
+        error.response?.status === 403 &&
+        error.response?.data?.limit !== undefined
+      ) {
+        setLimitMessage(error.response.data.message);
+        setShowLimitDialog(true);
+      } else {
+        toast({
+          title: "❌ Fehler",
+          description:
+            error.response?.data?.message ||
+            "Klinik konnte nicht erstellt werden",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -273,6 +303,44 @@ export default function AddClinicPage() {
           </div>
         </form>
       </Card>
+
+      {/* Limit Reached Dialog */}
+      <AlertDialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-orange-600 mb-2">
+              <AlertTriangle className="h-6 w-6" />
+              <AlertDialogTitle>Abonnementlimit erreicht</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-2">
+              <p>{limitMessage}</p>
+              {limits && (
+                <p className="text-sm text-gray-600">
+                  Aktuell: {limits.clinics.current} /{" "}
+                  {limits.clinics.limit === null ? "∞" : limits.clinics.limit}
+                </p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowLimitDialog(false);
+                router.push("/subscription-plans");
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Plan upgraden
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => setShowLimitDialog(false)}
+              className="bg-gray-500 hover:bg-gray-600"
+            >
+              Schließen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

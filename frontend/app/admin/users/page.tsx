@@ -22,8 +22,19 @@ import api from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useRoleCheck } from "@/hooks/useRoleCheck";
 
 export default function UsersManagementPage() {
+  // Check if user is super_admin
+  const {
+    user,
+    isAuthorized,
+    isLoading: authLoading,
+  } = useRoleCheck({
+    allowedRoles: ["super_admin"],
+    redirectTo: "/admin/dashboard",
+  });
+
   const [users, setUsers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +139,23 @@ export default function UsersManagementPage() {
     };
     return colors[roleName] || "bg-gray-100 text-gray-800";
   };
+
+  // Show loading while checking authorization
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-500">Überprüfe Berechtigungen...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authorized
+  if (!isAuthorized) {
+    return null;
+  }
 
   return (
     <div className="p-4 lg:p-8 space-y-6">

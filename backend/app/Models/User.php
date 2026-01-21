@@ -105,9 +105,27 @@ class User extends Authenticatable
         return $this->hasMany(Clinic::class, 'owner_id');
     }
 
+    /**
+     * Get all clinics the user has access to (owned or managed)
+     */
+    public function clinics()
+    {
+        if ($this->hasRole('super_admin')) {
+            return Clinic::query();
+        }
+
+        // For clinic_owner and clinic_manager, return their owned clinics
+        return $this->hasMany(Clinic::class, 'owner_id');
+    }
+
     public function clinicStaff()
     {
         return $this->hasMany(ClinicStaff::class);
+    }
+
+    public function patient()
+    {
+        return $this->hasOne(Patient::class);
     }
 
     public function patients()
